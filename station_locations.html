@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart-Urban-Vitality Station Locations</title>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBNF6uExCzzggGGH2rlu2ljvf6SfOINtbY"></script>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        #map {
+            height: 60vh;
+            width: 33%;
+            border: 2px solid #000;
+        }
+    </style>
+</head>
+<body>
+    <h1>Smart-Urban-Vitality Station Locations</h1>
+    <div id="map"></div>
+    <script>
+        function initMap() {
+            const map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 10,
+                center: { lat: 48.1500, lng: 11.5833 } // Centered around Munich
+            });
+
+            const stations = [
+                { lat: 48.1500, lng: 11.5833, name: 'Englischer Garten', id: 1 },
+                { lat: 48.2620, lng: 11.6670, name: 'Garching TUM Campus', id: 2 },
+                { lat: 48.2510, lng: 11.6520, name: 'Garching Mensa', id: 3 }
+                // Add more stations as needed
+            ];
+
+            stations.forEach(station => {
+                const marker = new google.maps.Marker({
+                    position: { lat: station.lat, lng: station.lng },
+                    map: map,
+                    title: station.name
+                });
+
+                marker.addListener('click', () => {
+                    // Hardcoded average data for the last 30 minutes
+                    const data = {
+                        "timestamp": "2023-10-01 12:00:00",
+                        "temperature": 22.5,
+                        "humidity": 55,
+                        "uv_index": 3,
+                        "air_quality": 42,
+                        "co2e": 400,
+                        "fill_level": 75,
+                        "rtc_time": "2023-10-01 12:00:00",
+                        "bme_iaq_accuracy": 1
+                    };
+
+                    let content = `<h3>${station.name}</h3>
+                                   <p>Timestamp: ${data.timestamp}</p>
+                                   <p>Temperature: ${data.temperature}</p>
+                                   <p>Humidity: ${data.humidity}</p>
+                                   <p>UV Index: ${data.uv_index}</p>
+                                   <p>Air Quality: ${data.air_quality}</p>
+                                   <p>CO2e: ${data.co2e}</p>
+                                   <p>Fill Level: ${data.fill_level}</p>
+                                   <p>RTC Time: ${data.rtc_time}</p>
+                                   <p>BME IAQ Accuracy: ${data.bme_iaq_accuracy}</p>`;
+
+                    const infoWindow = new google.maps.InfoWindow({
+                        content: content
+                    });
+
+                    infoWindow.open(map, marker);
+                });
+            });
+        }
+
+        window.onload = initMap;
+    </script>
+</body>
+</html>

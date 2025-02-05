@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart-Urban-Vitality</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 1em;
+            cursor: pointer;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            margin: 10px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            width: 80%;
+        }
+
+        .chart-container {
+            width: 100%;
+        }
+
+        canvas {
+            height: 250px !important;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Welcome to Smart-Urban-Vitality</h1>
+    <button onclick="window.location.href='/go-to-station-locations'">View Station Locations</button>
+    <button onclick="window.location.href='/logs'">View Logs</button>
+    <div class="chart-grid">
+        <div class="chart-container">
+            <canvas id="temperatureChart" width="400" height="150"></canvas>
+        </div>
+        <div class="chart-container">
+            <canvas id="airQualityChart" width="400" height="150"></canvas>
+        </div>
+        <div class="chart-container">
+            <canvas id="uvIndexChart" width="400" height="150"></canvas>
+        </div>
+        <div class="chart-container">
+            <canvas id="humidityChart" width="400" height="150"></canvas>
+        </div>
+        <div class="chart-container">
+            <canvas id="fillLevelChart" width="400" height="150"></canvas>
+        </div>
+    </div>
+    <script>
+        const labels = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'];
+
+        const temperatureData = {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Station Garching',
+                    data: [22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11],
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Station Englischer Garten',
+                    data: [18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7],
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Station Mensa',
+                    data: [25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14],
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }
+            ]
+        };
+
+        const airQualityData = {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Station 1',
+                    data: [42, 45, 40, 38, 35, 30, 28, 25, 20, 18, 15, 12],
+                    borderColor: 'rgba(255, 159, 64, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Station 2',
+                    data: [50, 48, 45, 43, 40, 38, 35, 33, 30, 28, 25, 22],
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Station 3',
+                    data: [60, 58, 55, 53, 50, 48, 45, 43, 40, 38, 35, 32],
+                    borderColor: 'rgba(255, 206, 86, 1)',
+                    borderWidth: 1
+                }
+            ]
+        };
+
+        const uvIndexData = {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Station 1',
+                    data: [2, 3, 4, 5, 7, 9, 8, 6, 5, 4, 3, 2],
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Station 2',
+                    data: [1, 2, 3, 4, 6, 8, 7, 5, 4, 3, 2, 1],
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Station 3',
+                    data: [0, 1, 2, 3, 5, 7, 6, 4, 3, 2, 1, 0],
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1
+                }
+            ]
+        };
+
+        const humidityData = {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Station 1',
+                    data: [55, 54, 53, 52, 51, 50, 49, 48, 47, 46, 45, 44],
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Station 2',
+                    data: [60, 59, 58, 57, 56, 55, 54, 53, 52, 51, 50, 49],
+                    borderColor: 'rgba(255, 159, 64, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Station 3',
+                    data: [65, 64, 63, 62, 61, 60, 59, 58, 57, 56, 55, 54],
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }
+            ]
+        };
+
+        const fillLevelData = {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Station 1',
+                    data: [75, 70, 65, 60, 55, 50, 45, 40, 35, 30, 25, 20],
+                    borderColor: 'rgba(255, 206, 86, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Station 2',
+                    data: [80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30, 25],
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Station 3',
+                    data: [85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30],
+                    borderColor: 'rgba(255, 159, 64, 1)',
+                    borderWidth: 1
+                }
+            ]
+        };
+
+        const temperatureChart = new Chart(document.getElementById('temperatureChart').getContext('2d'), {
+            type: 'line',
+            data: temperatureData,
+            options: {
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Temperature (°C)'
+                        }
+                    }
+                }
+            }
+        });
+
+        const airQualityChart = new Chart(document.getElementById('airQualityChart').getContext('2d'), {
+            type: 'line',
+            data: airQualityData,
+            options: {
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Air Quality'
+                        }
+                    }
+                }
+            }
+        });
+
+        const uvIndexChart = new Chart(document.getElementById('uvIndexChart').getContext('2d'), {
+            type: 'line',
+            data: uvIndexData,
+            options: {
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'UV Index'
+                        }
+                    }
+                }
+            }
+        });
+
+        const humidityChart = new Chart(document.getElementById('humidityChart').getContext('2d'), {
+            type: 'line',
+            data: humidityData,
+            options: {
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Humidity (%)'
+                        }
+                    }
+                }
+            }
+        });
+
+        const fillLevelChart = new Chart(document.getElementById('fillLevelChart').getContext('2d'), {
+            type: 'line',
+            data: fillLevelData,
+            options: {
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Fill Level (%)'
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
