@@ -243,12 +243,16 @@ def get_data():
             })
         
         app.logger.info(f'Found data for stations: {list(stations_data.keys())}')
-        return jsonify({
+        app.logger.info(f'STATIONS config: {STATIONS}')
+        
+        response_data = {
             "stations": STATIONS,
             "data": stations_data,
             "thresholds": THRESHOLDS,
             "update_intervals": UPDATE_INTERVALS
-        })
+        }
+        app.logger.info(f'Sending response: {json.dumps(response_data)}')
+        return jsonify(response_data)
         
     except Exception as e:
         app.logger.error(f'Error retrieving sensor data: {str(e)}')

@@ -255,11 +255,18 @@
 
     function checkAlerts(data, stations) {
         console.log('Checking alerts with data:', data);
+        console.log('Available stations:', stations);
         const alerts = [];
         
         Object.entries(data).forEach(([stationId, stationData]) => {
             if (!stationData || stationData.length === 0) {
                 console.log(`No data for station ${stationId}`);
+                return;
+            }
+            
+            // Skip if station not found in configuration
+            if (!stations[stationId]) {
+                console.log(`Station ${stationId} not found in configuration`);
                 return;
             }
             
@@ -312,6 +319,12 @@
     }
 
     function createToggle(key, stationId, stationData) {
+        // Skip if station not found in configuration
+        if (!stationData) {
+            console.log(`Cannot create toggle for station ${stationId}: station not found in configuration`);
+            return null;
+        }
+
         const toggle = document.createElement('div');
         toggle.className = 'station-toggle';
         toggle.innerHTML = `
@@ -356,17 +369,19 @@
                         toggleContainer.innerHTML = '';
                         Object.entries(stations).forEach(([stationId, stationData]) => {
                             const toggle = createToggle(key, stationId, stationData);
-                            toggleContainer.appendChild(toggle);
-                            
-                            toggle.querySelector('input').addEventListener('change', (e) => {
-                                const dataset = charts[key].data.datasets.find(
-                                    d => d.label === stationData.name
-                                );
-                                if (dataset) {
-                                    dataset.hidden = !e.target.checked;
-                                    charts[key].update();
-                                }
-                            });
+                            if (toggle) {
+                                toggleContainer.appendChild(toggle);
+                                
+                                toggle.querySelector('input').addEventListener('change', (e) => {
+                                    const dataset = charts[key].data.datasets.find(
+                                        d => d.label === stationData.name
+                                    );
+                                    if (dataset) {
+                                        dataset.hidden = !e.target.checked;
+                                        charts[key].update();
+                                    }
+                                });
+                            }
                         });
                     });
                 }
@@ -375,20 +390,22 @@
                 Object.entries(chartConfigs).forEach(([key, config]) => {
                     console.log(`Updating ${key} chart with data:`, data);
                     const chart = charts[key];
-                    chart.data.datasets = Object.entries(data).map(([stationId, stationData]) => {
-                        console.log(`Processing station ${stationId} data:`, stationData);
-                        return {
-                            label: stations[stationId].name,
-                            data: stationData.map(d => ({
-                                x: new Date(d.rtc_time),
-                                y: d[key]
-                            })).sort((a, b) => a.x - b.x),
-                            borderColor: stationColors[stationId],
-                            backgroundColor: stationColors[stationId],
-                            tension: 0.1,
-                            hidden: !document.getElementById(`${key}_station_${stationId}`)?.checked
-                        };
-                    });
+                    chart.data.datasets = Object.entries(data)
+                        .filter(([stationId]) => stations[stationId]) // Only include stations that exist in configuration
+                        .map(([stationId, stationData]) => {
+                            console.log(`Processing station ${stationId} data:`, stationData);
+                            return {
+                                label: stations[stationId].name,
+                                data: stationData.map(d => ({
+                                    x: new Date(d.rtc_time),
+                                    y: d[key]
+                                })).sort((a, b) => a.x - b.x),
+                                borderColor: stationColors[stationId],
+                                backgroundColor: stationColors[stationId],
+                                tension: 0.1,
+                                hidden: !document.getElementById(`${key}_station_${stationId}`)?.checked
+                            };
+                        });
                     chart.update('none'); // Use 'none' animation for smoother updates
                 });
             })
