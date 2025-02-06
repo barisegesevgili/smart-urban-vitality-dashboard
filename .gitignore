@@ -1,14 +1,10 @@
-# Virtual Environment
-venv/
-env/
-ENV/
-
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+env/
 build/
 develop-eggs/
 dist/
@@ -25,27 +21,35 @@ wheels/
 .installed.cfg
 *.egg
 
+# Virtual Environment
+venv/
+ENV/
+
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
 
-# Environment variables
-.env
-
 # Database
 *.db
 *.sqlite3
+*.sqlite
 
 # Logs
 *.log
-# logs folder
 logs/
+smart_urban_vitality.log
 
-# Flask
+# Configuration
+config.py
+.env
 instance/
-.webassets-cache
 
-# Migrations
+# OS
+.DS_Store
+Thumbs.db
+.directory
+
+# Migration
 migrations/versions/ 
