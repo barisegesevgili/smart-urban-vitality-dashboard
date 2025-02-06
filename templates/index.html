@@ -263,30 +263,28 @@
                 return;
             }
             
+            // Get last 5 data points
+            const last5Data = stationData.slice(-5);
+            const stationName = stations[stationId].name;
+            
+            console.log(`Checking last 5 data points for station ${stationName}:`, last5Data);
+            
+            // Check for combined high temperature and UV conditions
+            const hasHighTempAndUV = last5Data.some(reading => 
+                reading.temperature >= chartConfigs.temperature.warning.value && 
+                reading.uv_index >= chartConfigs.uv_index.warning.value
+            );
+
+            if (hasHighTempAndUV) {
+                alerts.push({
+                    type: 'warning',
+                    message: `${stationName}: High temperature and UV levels detected! Stay hydrated and use sunscreen.`,
+                    icon: '🌡️☀️'
+                });
+            }
+            
+            // Check fill level (using latest data point only as it's a current state)
             const latestData = stationData[stationData.length - 1];
-            const stationName = stations[stationId];
-            
-            console.log(`Checking station ${stationName} with latest data:`, latestData);
-            
-            // Check temperature
-            if (latestData.temperature >= chartConfigs.temperature.warning.value) {
-                alerts.push({
-                    type: 'warning',
-                    message: `${stationName}: ${chartConfigs.temperature.warning.message}`,
-                    icon: '🌡️'
-                });
-            }
-            
-            // Check UV index
-            if (latestData.uv_index >= chartConfigs.uv_index.warning.value) {
-                alerts.push({
-                    type: 'warning',
-                    message: `${stationName}: ${chartConfigs.uv_index.warning.message}`,
-                    icon: '☀️'
-                });
-            }
-            
-            // Check fill level
             if (latestData.fill_level <= chartConfigs.fill_level.warning.value) {
                 alerts.push({
                     type: 'danger',
@@ -313,14 +311,25 @@
         }
     }
 
+    function createToggle(key, stationId, stationData) {
+        const toggle = document.createElement('div');
+        toggle.className = 'station-toggle';
+        toggle.innerHTML = `
+            <input type="checkbox" id="${key}_station_${stationId}" checked>
+            <label for="${key}_station_${stationId}" style="color: ${stationColors[stationId]}">
+                ${stationData.name}
+            </label>
+        `;
+        return toggle;
+    }
+
     function updateCharts() {
         console.log('Updating charts...');
         fetch('/data')
             .then(response => response.json())
             .then(response => {
                 console.log('Received data:', response);
-                const { stations: newStations, data } = response;
-                stations = newStations; // Update global stations object
+                const { stations, data } = response;
                 
                 const noDataMessage = document.getElementById('noDataMessage');
                 
@@ -345,20 +354,13 @@
                         // Create toggles for each station
                         const toggleContainer = document.getElementById(key + 'Toggles');
                         toggleContainer.innerHTML = '';
-                        Object.entries(stations).forEach(([stationId, stationName]) => {
-                            const toggle = document.createElement('div');
-                            toggle.className = 'station-toggle';
-                            toggle.innerHTML = `
-                                <input type="checkbox" id="${key}_station_${stationId}" checked>
-                                <label for="${key}_station_${stationId}" style="color: ${stationColors[stationId]}">
-                                    ${stationName}
-                                </label>
-                            `;
+                        Object.entries(stations).forEach(([stationId, stationData]) => {
+                            const toggle = createToggle(key, stationId, stationData);
                             toggleContainer.appendChild(toggle);
                             
                             toggle.querySelector('input').addEventListener('change', (e) => {
                                 const dataset = charts[key].data.datasets.find(
-                                    d => d.label === stationName
+                                    d => d.label === stationData.name
                                 );
                                 if (dataset) {
                                     dataset.hidden = !e.target.checked;
@@ -376,7 +378,7 @@
                     chart.data.datasets = Object.entries(data).map(([stationId, stationData]) => {
                         console.log(`Processing station ${stationId} data:`, stationData);
                         return {
-                            label: stations[stationId],
+                            label: stations[stationId].name,
                             data: stationData.map(d => ({
                                 x: new Date(d.rtc_time),
                                 y: d[key]

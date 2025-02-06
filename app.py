@@ -6,6 +6,14 @@ from datetime import datetime, timedelta
 import os
 import logging
 from logging.handlers import RotatingFileHandler
+from config import (
+    FLASK_ENV, 
+    DEBUG, 
+    GOOGLE_MAPS_API_KEY, 
+    STATIONS, 
+    THRESHOLDS,
+    UPDATE_INTERVALS
+)
 
 app = Flask(__name__)
 CORS(app)
@@ -157,12 +165,9 @@ def get_data():
         if not sensor_data:
             app.logger.warning('No sensor data found in database')
             return jsonify({
-                "stations": {
-                    "1": "Englischer Garten",
-                    "2": "Garching TUM Campus",
-                    "3": "Garching Mensa"
-                },
-                "data": {}
+                "stations": STATIONS,
+                "data": {},
+                "thresholds": THRESHOLDS
             })
             
         # Group data by station_id
@@ -187,12 +192,10 @@ def get_data():
         
         app.logger.info(f'Found data for stations: {list(stations_data.keys())}')
         return jsonify({
-            "stations": {
-                "1": "Englischer Garten",
-                "2": "Garching TUM Campus",
-                "3": "Garching Mensa"
-            },
-            "data": stations_data
+            "stations": STATIONS,
+            "data": stations_data,
+            "thresholds": THRESHOLDS,
+            "update_intervals": UPDATE_INTERVALS
         })
         
     except Exception as e:
@@ -203,7 +206,9 @@ def get_data():
 def station_locations():
     try:
         app.logger.info('Accessing station locations page')
-        return render_template('station_locations.html')
+        return render_template('station_locations.html', 
+                             google_maps_api_key=GOOGLE_MAPS_API_KEY,
+                             stations=STATIONS)
     except Exception as e:
         app.logger.error(f'Error rendering station locations page: {str(e)}')
         return jsonify({"status": "error", "message": "Internal server error"}), 500
@@ -297,6 +302,9 @@ def logs_data():
 
 @app.route('/delete_data', methods=['POST'])
 def delete_data():
+    if FLASK_ENV != 'development':
+        return jsonify({"status": "error", "message": "Delete operation only allowed in development environment"}), 403
+        
     try:
         delete_type = request.args.get('type', 'all')
         days = request.args.get('days', type=int)
@@ -330,4 +338,4 @@ def delete_data():
         return jsonify({"status": "error", "message": "Error deleting data"}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=DEBUG)
