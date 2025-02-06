@@ -337,5 +337,9 @@ def delete_data():
         app.logger.error(f'Error deleting data: {str(e)}')
         return jsonify({"status": "error", "message": "Error deleting data"}), 500
 
+@app.route('/health')
+def health():
+    return jsonify({"status": "healthy"}), 200
+
 if __name__ == '__main__':
     app.run(debug=DEBUG)
