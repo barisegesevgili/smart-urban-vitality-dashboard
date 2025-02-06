@@ -78,25 +78,10 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Initialize extensions
 db = SQLAlchemy(app)
-migrate = Migrate(app, db)
-
-# Create tables on startup in production
-if FLASK_ENV == 'production':
-    with app.app_context():
-        try:
-            db.create_all()
-            app.logger.info('Database tables created successfully')
-        except Exception as e:
-            app.logger.error(f'Error creating database tables: {str(e)}')
-
-class DatabaseError(Exception):
-    pass
-
-class ValidationError(Exception):
-    pass
 
 # Models
 class SensorData(db.Model):
+    __tablename__ = 'sensor_data'
     id = db.Column(db.Integer, primary_key=True)
     timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     temperature = db.Column(db.Float)
@@ -108,6 +93,23 @@ class SensorData(db.Model):
     rtc_time = db.Column(db.DateTime)
     bme_iaq_accuracy = db.Column(db.Integer)
     station_id = db.Column(db.Integer)
+
+# Initialize migrations after model definition
+migrate = Migrate(app, db)
+
+# Create tables
+with app.app_context():
+    try:
+        db.create_all()
+        app.logger.info('Database tables created successfully')
+    except Exception as e:
+        app.logger.error(f'Error creating database tables: {str(e)}')
+
+class DatabaseError(Exception):
+    pass
+
+class ValidationError(Exception):
+    pass
 
 def validate_sensor_data(data):
     required_fields = ['timestamp', 'temperature', 'humidity', 'uv_index', 
