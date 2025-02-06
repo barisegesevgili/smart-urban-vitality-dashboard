@@ -19,6 +19,8 @@ A real-time monitoring dashboard for urban environmental sensors, built with Fla
 
 ## Setup Instructions
 
+### Local Development
+
 1. Clone the repository:
 ```bash
 git clone https://github.com/barisegesevgili/smart-urban-vitality-dashboard.git
@@ -63,9 +65,35 @@ flask run
 
 The dashboard will be available at `http://localhost:5000`
 
+### Deployment Configuration
+
+When deploying to Render or similar platforms, you need to set the following environment variables:
+
+1. Required Environment Variables:
+   - `FLASK_ENV`: Set to 'production'
+   - `DEBUG`: Set to 'false'
+   - `GOOGLE_MAPS_API_KEY`: Your Google Maps API key
+   - `SECRET_KEY`: A secure secret key for the application
+   - `STATIONS`: JSON configuration for your monitoring stations (example below)
+
+2. Example STATIONS configuration:
+```json
+{
+  "1": {"name": "Englischer Garten", "location": {"lat": 48.1500, "lng": 11.5833}},
+  "2": {"name": "Garching TUM Campus", "location": {"lat": 48.2620, "lng": 11.6670}},
+  "3": {"name": "Garching Mensa", "location": {"lat": 48.2510, "lng": 11.6520}}
+}
+```
+
+3. Optional Environment Variables:
+   - `THRESHOLDS`: JSON configuration for sensor thresholds
+   - `UPDATE_INTERVALS`: JSON configuration for update intervals
+
+Note: When setting JSON environment variables, ensure they are properly formatted as a single line without line breaks.
+
 ## Configuration
 
-The application is highly configurable through `config.py`:
+The application is highly configurable through `config.py` (development) or environment variables (production):
 
 - `FLASK_ENV`: Set to 'development' or 'production'
 - `DEBUG`: Enable/disable debug mode
