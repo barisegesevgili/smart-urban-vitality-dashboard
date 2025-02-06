@@ -11,14 +11,43 @@ from logging.handlers import RotatingFileHandler
 def load_config():
     """Load configuration from environment variables in production, fall back to config.py in development"""
     if os.environ.get('FLASK_ENV') == 'production':
-        return {
-            'FLASK_ENV': os.environ.get('FLASK_ENV', 'production'),
-            'DEBUG': os.environ.get('DEBUG', 'false').lower() == 'true',
-            'GOOGLE_MAPS_API_KEY': os.environ.get('GOOGLE_MAPS_API_KEY'),
-            'STATIONS': json.loads(os.environ.get('STATIONS', '{}')),
-            'THRESHOLDS': json.loads(os.environ.get('THRESHOLDS', '{}')),
-            'UPDATE_INTERVALS': json.loads(os.environ.get('UPDATE_INTERVALS', '{}'))
-        }
+        try:
+            stations_str = os.environ.get('STATIONS', '{}')
+            thresholds_str = os.environ.get('THRESHOLDS', '{}')
+            update_intervals_str = os.environ.get('UPDATE_INTERVALS', '{}')
+            
+            # Log the raw values for debugging
+            app.logger.info(f'Raw STATIONS env var: {stations_str}')
+            app.logger.info(f'Raw THRESHOLDS env var: {thresholds_str}')
+            app.logger.info(f'Raw UPDATE_INTERVALS env var: {update_intervals_str}')
+            
+            # Parse JSON strings, ensuring string keys for stations
+            stations_dict = json.loads(stations_str)
+            stations = {str(k): v for k, v in stations_dict.items()}
+            
+            return {
+                'FLASK_ENV': os.environ.get('FLASK_ENV', 'production'),
+                'DEBUG': os.environ.get('DEBUG', 'false').lower() == 'true',
+                'GOOGLE_MAPS_API_KEY': os.environ.get('GOOGLE_MAPS_API_KEY'),
+                'STATIONS': stations,
+                'THRESHOLDS': json.loads(thresholds_str),
+                'UPDATE_INTERVALS': json.loads(update_intervals_str)
+            }
+        except json.JSONDecodeError as e:
+            app.logger.error(f'Error parsing configuration JSON: {str(e)}')
+            # Fallback to empty configurations
+            return {
+                'FLASK_ENV': 'production',
+                'DEBUG': False,
+                'GOOGLE_MAPS_API_KEY': '',
+                'STATIONS': {
+                    "1": {"name": "Englischer Garten", "location": {"lat": 48.1500, "lng": 11.5833}},
+                    "2": {"name": "Garching TUM Campus", "location": {"lat": 48.2620, "lng": 11.6670}},
+                    "3": {"name": "Garching Mensa", "location": {"lat": 48.2510, "lng": 11.6520}}
+                },
+                'THRESHOLDS': {},
+                'UPDATE_INTERVALS': {'charts': 30000, 'alerts': 30000}
+            }
     else:
         try:
             from config import (
@@ -43,7 +72,11 @@ def load_config():
                 'FLASK_ENV': 'development',
                 'DEBUG': True,
                 'GOOGLE_MAPS_API_KEY': '',
-                'STATIONS': {},
+                'STATIONS': {
+                    "1": {"name": "Englischer Garten", "location": {"lat": 48.1500, "lng": 11.5833}},
+                    "2": {"name": "Garching TUM Campus", "location": {"lat": 48.2620, "lng": 11.6670}},
+                    "3": {"name": "Garching Mensa", "location": {"lat": 48.2510, "lng": 11.6520}}
+                },
                 'THRESHOLDS': {},
                 'UPDATE_INTERVALS': {'charts': 30000, 'alerts': 30000}
             }
