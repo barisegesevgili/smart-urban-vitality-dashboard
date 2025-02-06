@@ -7,12 +7,37 @@ services:
     envVars:
       - key: FLASK_ENV
         value: production
+      - key: DEBUG
+        value: false
       - key: PYTHON_VERSION
         value: 3.9.0
       - key: PORT
         value: 5001
+      # Secret environment variables to be set in Render dashboard
       - key: GOOGLE_MAPS_API_KEY
         sync: false
+      - key: SECRET_KEY
+        sync: false
+      - key: STATIONS
+        value: '{
+          "1": {"name": "Englischer Garten", "location": {"lat": 48.1500, "lng": 11.5833}},
+          "2": {"name": "Garching TUM Campus", "location": {"lat": 48.2620, "lng": 11.6670}},
+          "3": {"name": "Garching Mensa", "location": {"lat": 48.2510, "lng": 11.6520}}
+        }'
+      - key: THRESHOLDS
+        value: '{
+          "temperature": {"min": -15, "max": 35, "warning": 30},
+          "humidity": {"min": 0, "max": 100},
+          "uv_index": {"min": 0, "max": 12, "warning": 6},
+          "air_quality": {"min": 0, "max": 100},
+          "co2e": {"min": 300, "max": 1000},
+          "fill_level": {"min": 0, "max": 100, "warning": 20}
+        }'
+      - key: UPDATE_INTERVALS
+        value: '{
+          "charts": 30000,
+          "alerts": 30000
+        }'
     healthCheckPath: /health
     autoDeploy: true
     preDeployCommand: flask db upgrade 

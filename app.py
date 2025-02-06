@@ -4,6 +4,7 @@ from flask_migrate import Migrate
 from flask_cors import CORS
 from datetime import datetime, timedelta
 import os
+import json
 import logging
 from logging.handlers import RotatingFileHandler
 from config import (
@@ -14,6 +15,43 @@ from config import (
     THRESHOLDS,
     UPDATE_INTERVALS
 )
+
+def load_config():
+    """Load configuration from environment variables in production, fall back to config.py in development"""
+    if os.environ.get('FLASK_ENV') == 'production':
+        return {
+            'FLASK_ENV': os.environ.get('FLASK_ENV', 'production'),
+            'DEBUG': os.environ.get('DEBUG', 'false').lower() == 'true',
+            'GOOGLE_MAPS_API_KEY': os.environ.get('GOOGLE_MAPS_API_KEY'),
+            'STATIONS': json.loads(os.environ.get('STATIONS', '{}')),
+            'THRESHOLDS': json.loads(os.environ.get('THRESHOLDS', '{}')),
+            'UPDATE_INTERVALS': json.loads(os.environ.get('UPDATE_INTERVALS', '{}'))
+        }
+    else:
+        from config import (
+            FLASK_ENV, 
+            DEBUG, 
+            GOOGLE_MAPS_API_KEY, 
+            STATIONS, 
+            THRESHOLDS,
+            UPDATE_INTERVALS
+        )
+        return {
+            'FLASK_ENV': FLASK_ENV,
+            'DEBUG': DEBUG,
+            'GOOGLE_MAPS_API_KEY': GOOGLE_MAPS_API_KEY,
+            'STATIONS': STATIONS,
+            'THRESHOLDS': THRESHOLDS,
+            'UPDATE_INTERVALS': UPDATE_INTERVALS
+        }
+
+config = load_config()
+FLASK_ENV = config['FLASK_ENV']
+DEBUG = config['DEBUG']
+GOOGLE_MAPS_API_KEY = config['GOOGLE_MAPS_API_KEY']
+STATIONS = config['STATIONS']
+THRESHOLDS = config['THRESHOLDS']
+UPDATE_INTERVALS = config['UPDATE_INTERVALS']
 
 app = Flask(__name__)
 CORS(app)
