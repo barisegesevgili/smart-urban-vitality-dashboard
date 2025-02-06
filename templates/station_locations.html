@@ -10,16 +10,28 @@
         width: 100%;
         border-radius: 8px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-top: 20px;
     }
     .info-window {
         padding: 10px;
+        max-width: 300px;
     }
     .info-window h3 {
         margin-top: 0;
         margin-bottom: 10px;
+        color: #333;
     }
     .info-window p {
         margin: 5px 0;
+        color: #666;
+    }
+    .info-window .value {
+        font-weight: bold;
+        color: #333;
+    }
+    .no-data {
+        color: #999;
+        font-style: italic;
     }
 </style>
 {% endblock %}
@@ -33,66 +45,103 @@
 
 {% block extra_scripts %}
 <script>
+    function formatDateTime(dateString) {
+        return new Date(dateString).toLocaleString();
+    }
+
+    function createInfoWindowContent(station, data) {
+        if (data.status === 'no_data') {
+            return `
+                <div class="info-window">
+                    <h3>${station.name}</h3>
+                    <p class="no-data">No data available for this station</p>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="info-window">
+                <h3>${station.name}</h3>
+                <p>Temperature: <span class="value">${data.temperature}°C</span></p>
+                <p>Humidity: <span class="value">${data.humidity}%</span></p>
+                <p>UV Index: <span class="value">${data.uv_index}</span></p>
+                <p>Air Quality: <span class="value">${data.air_quality}</span></p>
+                <p>CO2e: <span class="value">${data.co2e} ppm</span></p>
+                <p>Fill Level: <span class="value">${data.fill_level}%</span></p>
+                <p>Last Updated: <span class="value">${formatDateTime(data.rtc_time)}</span></p>
+            </div>
+        `;
+    }
+
     function initMap() {
+        console.log('Initializing map...');
         const map = new google.maps.Map(document.getElementById('map'), {
-            zoom: 12,
-            center: { lat: 48.1500, lng: 11.5833 } // Munich center
+            zoom: 11,
+            center: { lat: 48.1500, lng: 11.5833 }, // Munich center
+            styles: [
+                {
+                    featureType: "poi",
+                    elementType: "labels",
+                    stylers: [{ visibility: "off" }]
+                }
+            ]
         });
 
         const stations = [
-            { lat: 48.1500, lng: 11.5833, name: 'Englischer Garten', id: 1 },
-            { lat: 48.2620, lng: 11.6670, name: 'Garching TUM Campus', id: 2 },
-            { lat: 48.2510, lng: 11.6520, name: 'Garching Mensa', id: 3 }
+            { 
+                id: 1,
+                name: 'Englischer Garten',
+                position: { lat: 48.1500, lng: 11.5833 }
+            },
+            { 
+                id: 2,
+                name: 'Garching TUM Campus',
+                position: { lat: 48.2620, lng: 11.6670 }
+            },
+            { 
+                id: 3,
+                name: 'Garching Mensa',
+                position: { lat: 48.2510, lng: 11.6520 }
+            }
         ];
 
         stations.forEach(station => {
+            console.log(`Creating marker for station ${station.name}`);
             const marker = new google.maps.Marker({
-                position: { lat: station.lat, lng: station.lng },
+                position: station.position,
                 map: map,
-                title: station.name
+                title: station.name,
+                animation: google.maps.Animation.DROP
             });
 
             marker.addListener('click', () => {
+                console.log(`Fetching data for station ${station.id}`);
                 fetch(`/sensor_data/${station.id}`)
                     .then(response => response.json())
                     .then(data => {
-                        const content = `
-                            <div class="info-window">
-                                <h3>${station.name}</h3>
-                                <p>Temperature: ${data.temperature}°C</p>
-                                <p>Humidity: ${data.humidity}%</p>
-                                <p>UV Index: ${data.uv_index}</p>
-                                <p>Air Quality: ${data.air_quality}</p>
-                                <p>CO2e: ${data.co2e} ppm</p>
-                                <p>Fill Level: ${data.fill_level}%</p>
-                                <p>Last Updated: ${new Date(data.timestamp).toLocaleString()}</p>
-                            </div>
-                        `;
-
+                        console.log('Received data:', data);
+                        const content = createInfoWindowContent(station, data);
                         const infoWindow = new google.maps.InfoWindow({
                             content: content
                         });
-
                         infoWindow.open(map, marker);
                     })
                     .catch(error => {
-                        const content = `
-                            <div class="info-window">
-                                <h3>${station.name}</h3>
-                                <p>No data available</p>
-                            </div>
-                        `;
-
+                        console.error('Error fetching station data:', error);
+                        const content = createInfoWindowContent(station, { status: 'no_data' });
                         const infoWindow = new google.maps.InfoWindow({
                             content: content
                         });
-
                         infoWindow.open(map, marker);
                     });
             });
         });
     }
 
-    window.onload = initMap;
+    // Initialize map when the page loads
+    window.onload = function() {
+        console.log('Page loaded, initializing map...');
+        initMap();
+    };
 </script>
 {% endblock %} 

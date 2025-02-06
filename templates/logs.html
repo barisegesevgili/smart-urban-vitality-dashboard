@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+
+{% block title %}Smart-Urban-Vitality - Sensor Logs{% endblock %}
+
+{% block extra_head %}
+<style>
+    .logs-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    .log-filters {
+        margin-bottom: 20px;
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+    .log-entry {
+        background: white;
+        padding: 15px;
+        margin-bottom: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+    }
+    .log-entry:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .log-entry-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        color: #666;
+        font-size: 0.9em;
+    }
+    .log-entry-content {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+    }
+    .log-value {
+        padding: 8px;
+        background: #f8f9fa;
+        border-radius: 4px;
+    }
+    .log-value span {
+        font-weight: bold;
+        color: #333;
+    }
+    .station-badge {
+        background-color: #007bff;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8em;
+    }
+    .auto-update {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-left: auto;
+    }
+    /* Dev Tools Section */
+    .dev-tools {
+        background-color: #fff3cd;
+        border: 2px dashed #ffeeba;
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 8px;
+    }
+    .dev-tools h4 {
+        color: #856404;
+        margin-bottom: 15px;
+    }
+    .delete-options {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+    .days-input {
+        width: 80px;
+    }
+    .delete-status {
+        margin-top: 10px;
+        padding: 10px;
+        border-radius: 4px;
+        display: none;
+    }
+    .delete-status.success {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    .delete-status.error {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="logs-container">
+    <h1 class="text-center mb-4">Sensor Data Logs</h1>
+    
+    <!-- Development Tools Section -->
+    <div class="dev-tools">
+        <h4>⚠️ Development Tools</h4>
+        <div class="delete-options">
+            <button class="btn btn-danger" onclick="deleteAllData()">Delete All Data</button>
+            <div class="input-group" style="width: auto;">
+                <input type="number" class="form-control days-input" id="daysInput" value="7" min="1">
+                <button class="btn btn-warning" onclick="deleteOlderThan()">
+                    Delete Data Older Than (days)
+                </button>
+            </div>
+        </div>
+        <div id="deleteStatus" class="delete-status"></div>
+    </div>
+    
+    <div class="log-filters">
+        <select class="form-select" style="width: auto;" id="stationFilter">
+            <option value="">All Stations</option>
+            <option value="1">Englischer Garten</option>
+            <option value="2">Garching TUM Campus</option>
+            <option value="3">Garching Mensa</option>
+        </select>
+        
+        <select class="form-select" style="width: auto;" id="timeFilter">
+            <option value="100">Last 100 entries</option>
+            <option value="50">Last 50 entries</option>
+            <option value="20">Last 20 entries</option>
+        </select>
+
+        <div class="auto-update">
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="autoUpdate" checked>
+                <label class="form-check-label" for="autoUpdate">Auto Update</label>
+            </div>
+            <span id="lastUpdate" class="text-muted"></span>
+        </div>
+    </div>
+
+    <div id="logsContainer">
+        <!-- Logs will be dynamically inserted here -->
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function formatDateTime(dateString) {
+        return new Date(dateString).toLocaleString();
+    }
+
+    function getStationName(stationId) {
+        const stations = {
+            1: 'Englischer Garten',
+            2: 'Garching TUM Campus',
+            3: 'Garching Mensa'
+        };
+        return stations[stationId] || `Station ${stationId}`;
+    }
+
+    function createLogEntry(data) {
+        return `
+            <div class="log-entry">
+                <div class="log-entry-header">
+                    <span class="station-badge">${getStationName(data.station_id)}</span>
+                    <span>${formatDateTime(data.rtc_time)}</span>
+                </div>
+                <div class="log-entry-content">
+                    <div class="log-value">Temperature: <span>${data.temperature}°C</span></div>
+                    <div class="log-value">Humidity: <span>${data.humidity}%</span></div>
+                    <div class="log-value">UV Index: <span>${data.uv_index}</span></div>
+                    <div class="log-value">Air Quality: <span>${data.air_quality}</span></div>
+                    <div class="log-value">CO2e: <span>${data.co2e} ppm</span></div>
+                    <div class="log-value">Fill Level: <span>${data.fill_level}%</span></div>
+                </div>
+            </div>
+        `;
+    }
+
+    function showDeleteStatus(message, isSuccess) {
+        const statusDiv = document.getElementById('deleteStatus');
+        statusDiv.textContent = message;
+        statusDiv.style.display = 'block';
+        statusDiv.className = 'delete-status ' + (isSuccess ? 'success' : 'error');
+        
+        // Hide status after 5 seconds
+        setTimeout(() => {
+            statusDiv.style.display = 'none';
+        }, 5000);
+
+        // Refresh logs if deletion was successful
+        if (isSuccess) {
+            updateLogs();
+        }
+    }
+
+    function deleteAllData() {
+        if (!confirm('Are you sure you want to delete ALL sensor data? This action cannot be undone.')) {
+            return;
+        }
+
+        fetch('/delete_data?type=all', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showDeleteStatus(data.message, true);
+                } else {
+                    showDeleteStatus(data.message, false);
+                }
+            })
+            .catch(error => {
+                showDeleteStatus('Error deleting data: ' + error, false);
+            });
+    }
+
+    function deleteOlderThan() {
+        const days = document.getElementById('daysInput').value;
+        if (!days || days < 1) {
+            showDeleteStatus('Please enter a valid number of days', false);
+            return;
+        }
+
+        if (!confirm(`Are you sure you want to delete all sensor data older than ${days} days? This action cannot be undone.`)) {
+            return;
+        }
+
+        fetch(`/delete_data?type=older_than&days=${days}`, { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showDeleteStatus(data.message, true);
+                } else {
+                    showDeleteStatus(data.message, false);
+                }
+            })
+            .catch(error => {
+                showDeleteStatus('Error deleting data: ' + error, false);
+            });
+    }
+
+    function updateLogs() {
+        const stationFilter = document.getElementById('stationFilter').value;
+        const timeFilter = document.getElementById('timeFilter').value;
+        
+        fetch(`/logs_data?station=${stationFilter}&limit=${timeFilter}`)
+            .then(response => response.json())
+            .then(data => {
+                const logsContainer = document.getElementById('logsContainer');
+                logsContainer.innerHTML = data.map(createLogEntry).join('');
+                document.getElementById('lastUpdate').textContent = 
+                    `Last updated: ${new Date().toLocaleTimeString()}`;
+            });
+    }
+
+    // Initial update
+    updateLogs();
+
+    // Setup event listeners
+    document.getElementById('stationFilter').addEventListener('change', updateLogs);
+    document.getElementById('timeFilter').addEventListener('change', updateLogs);
+
+    // Auto update every 30 seconds if enabled
+    setInterval(() => {
+        if (document.getElementById('autoUpdate').checked) {
+            updateLogs();
+        }
+    }, 30000);
+</script>
+{% endblock %} 

@@ -4,12 +4,48 @@
 
 {% block extra_head %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 <style>
+    .dashboard-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    .alerts-panel {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    .alert {
+        padding: 10px 15px;
+        margin-bottom: 10px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .alert:last-child {
+        margin-bottom: 0;
+    }
+    .alert.warning {
+        background-color: #fff3cd;
+        border: 1px solid #ffeeba;
+        color: #856404;
+    }
+    .alert.danger {
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+    }
+    .alert-icon {
+        font-size: 1.2em;
+    }
     .chart-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
         gap: 20px;
-        margin-top: 20px;
     }
     .chart-container {
         background: white;
@@ -17,34 +53,93 @@
         border-radius: 8px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
+    .chart-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    .station-toggles {
+        display: flex;
+        gap: 10px;
+        font-size: 0.9em;
+    }
+    .station-toggle {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .station-toggle input {
+        margin: 0;
+    }
     h1 {
         text-align: center;
-        margin-bottom: 30px;
+        margin-bottom: 20px;
+    }
+    .no-data-message {
+        text-align: center;
+        color: #666;
+        margin: 20px 0;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container">
+<div class="dashboard-container">
     <h1>Smart-Urban-Vitality Dashboard</h1>
+    
+    <!-- Alerts Panel -->
+    <div id="alertsPanel" class="alerts-panel" style="display: none;">
+        <h5 class="mb-3">⚠️ Active Alerts</h5>
+        <div id="alertsList"></div>
+    </div>
+
+    <div id="noDataMessage" class="no-data-message" style="display: none;">
+        No sensor data available. Waiting for data...
+    </div>
+    
     <div class="chart-grid">
         <div class="chart-container">
+            <div class="chart-header">
+                <h5>Temperature</h5>
+                <div class="station-toggles" id="temperatureToggles"></div>
+            </div>
             <canvas id="temperatureChart"></canvas>
         </div>
         <div class="chart-container">
+            <div class="chart-header">
+                <h5>Humidity</h5>
+                <div class="station-toggles" id="humidityToggles"></div>
+            </div>
             <canvas id="humidityChart"></canvas>
         </div>
         <div class="chart-container">
-            <canvas id="uvIndexChart"></canvas>
+            <div class="chart-header">
+                <h5>UV Index</h5>
+                <div class="station-toggles" id="uv_indexToggles"></div>
+            </div>
+            <canvas id="uv_indexChart"></canvas>
         </div>
         <div class="chart-container">
-            <canvas id="airQualityChart"></canvas>
+            <div class="chart-header">
+                <h5>Air Quality</h5>
+                <div class="station-toggles" id="air_qualityToggles"></div>
+            </div>
+            <canvas id="air_qualityChart"></canvas>
         </div>
         <div class="chart-container">
+            <div class="chart-header">
+                <h5>CO2e</h5>
+                <div class="station-toggles" id="co2eToggles"></div>
+            </div>
             <canvas id="co2eChart"></canvas>
         </div>
         <div class="chart-container">
-            <canvas id="fillLevelChart"></canvas>
+            <div class="chart-header">
+                <h5>Fill Level</h5>
+                <div class="station-toggles" id="fill_levelToggles"></div>
+            </div>
+            <canvas id="fill_levelChart"></canvas>
         </div>
     </div>
 </div>
@@ -52,40 +147,253 @@
 
 {% block extra_scripts %}
 <script>
-    function createChart(canvasId, label, data, color) {
+    const chartConfigs = {
+        temperature: { 
+            color: 'rgb(255, 99, 132)', 
+            unit: '°C',
+            min: -15,
+            max: 35,
+            warning: { value: 30, message: 'High temperature detected! Remember to stay hydrated.' }
+        },
+        humidity: { 
+            color: 'rgb(54, 162, 235)', 
+            unit: '%',
+            min: 0,
+            max: 100
+        },
+        uv_index: { 
+            color: 'rgb(255, 206, 86)', 
+            unit: '',
+            min: 0,
+            max: 12,
+            warning: { value: 6, message: 'High UV levels! Don\'t forget to use sunscreen.' }
+        },
+        air_quality: { 
+            color: 'rgb(75, 192, 192)', 
+            unit: '',
+            min: 0,
+            max: 100
+        },
+        co2e: { 
+            color: 'rgb(153, 102, 255)', 
+            unit: 'ppm',
+            min: 300,
+            max: 1000
+        },
+        fill_level: { 
+            color: 'rgb(255, 159, 64)', 
+            unit: '%',
+            min: 0,
+            max: 100,
+            warning: { value: 20, message: 'Low fill level detected! Maintenance required.' }
+        }
+    };
+
+    const stationColors = {
+        1: 'rgb(255, 99, 132)',
+        2: 'rgb(54, 162, 235)',
+        3: 'rgb(255, 206, 86)'
+    };
+
+    const charts = {};
+    let stations = {}; // Global stations object
+
+    function createChart(canvasId, label, config) {
+        console.log(`Creating chart: ${canvasId} with config:`, config);
         const ctx = document.getElementById(canvasId).getContext('2d');
         return new Chart(ctx, {
             type: 'line',
             data: {
-                labels: data.map(d => new Date(d.timestamp).toLocaleTimeString()),
-                datasets: [{
-                    label: label,
-                    data: data.map(d => d[label.toLowerCase().replace(' ', '_')]),
-                    borderColor: color,
-                    tension: 0.1
-                }]
+                datasets: []
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: true,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
                 scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'minute',
+                            displayFormats: {
+                                minute: 'HH:mm'
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        }
+                    },
                     y: {
-                        beginAtZero: true
+                        min: config.min,
+                        max: config.max,
+                        title: {
+                            display: true,
+                            text: label + (config.unit ? ` (${config.unit})` : '')
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function(context) {
+                                return new Date(context[0].raw.x).toLocaleString();
+                            }
+                        }
                     }
                 }
             }
         });
     }
 
+    function checkAlerts(data, stations) {
+        console.log('Checking alerts with data:', data);
+        const alerts = [];
+        
+        Object.entries(data).forEach(([stationId, stationData]) => {
+            if (!stationData || stationData.length === 0) {
+                console.log(`No data for station ${stationId}`);
+                return;
+            }
+            
+            const latestData = stationData[stationData.length - 1];
+            const stationName = stations[stationId];
+            
+            console.log(`Checking station ${stationName} with latest data:`, latestData);
+            
+            // Check temperature
+            if (latestData.temperature >= chartConfigs.temperature.warning.value) {
+                alerts.push({
+                    type: 'warning',
+                    message: `${stationName}: ${chartConfigs.temperature.warning.message}`,
+                    icon: '🌡️'
+                });
+            }
+            
+            // Check UV index
+            if (latestData.uv_index >= chartConfigs.uv_index.warning.value) {
+                alerts.push({
+                    type: 'warning',
+                    message: `${stationName}: ${chartConfigs.uv_index.warning.message}`,
+                    icon: '☀️'
+                });
+            }
+            
+            // Check fill level
+            if (latestData.fill_level <= chartConfigs.fill_level.warning.value) {
+                alerts.push({
+                    type: 'danger',
+                    message: `${stationName}: ${chartConfigs.fill_level.warning.message}`,
+                    icon: '⚠️'
+                });
+            }
+        });
+
+        console.log('Generated alerts:', alerts);
+        const alertsPanel = document.getElementById('alertsPanel');
+        const alertsList = document.getElementById('alertsList');
+        
+        if (alerts.length > 0) {
+            alertsList.innerHTML = alerts.map(alert => `
+                <div class="alert ${alert.type}">
+                    <span class="alert-icon">${alert.icon}</span>
+                    <span>${alert.message}</span>
+                </div>
+            `).join('');
+            alertsPanel.style.display = 'block';
+        } else {
+            alertsPanel.style.display = 'none';
+        }
+    }
+
     function updateCharts() {
+        console.log('Updating charts...');
         fetch('/data')
             .then(response => response.json())
-            .then(data => {
-                createChart('temperatureChart', 'Temperature', data, 'rgb(255, 99, 132)');
-                createChart('humidityChart', 'Humidity', data, 'rgb(54, 162, 235)');
-                createChart('uvIndexChart', 'UV Index', data, 'rgb(255, 206, 86)');
-                createChart('airQualityChart', 'Air Quality', data, 'rgb(75, 192, 192)');
-                createChart('co2eChart', 'CO2e', data, 'rgb(153, 102, 255)');
-                createChart('fillLevelChart', 'Fill Level', data, 'rgb(255, 159, 64)');
+            .then(response => {
+                console.log('Received data:', response);
+                const { stations: newStations, data } = response;
+                stations = newStations; // Update global stations object
+                
+                const noDataMessage = document.getElementById('noDataMessage');
+                
+                if (Object.keys(data).length === 0) {
+                    console.log('No data available');
+                    noDataMessage.style.display = 'block';
+                    return;
+                } else {
+                    noDataMessage.style.display = 'none';
+                }
+
+                // Check for alerts
+                checkAlerts(data, stations);
+
+                // Initialize charts if not already done
+                if (!charts.temperature) {
+                    console.log('Initializing charts...');
+                    Object.entries(chartConfigs).forEach(([key, config]) => {
+                        const chartId = key + 'Chart';
+                        charts[key] = createChart(chartId, key.replace('_', ' ').toUpperCase(), config);
+                        
+                        // Create toggles for each station
+                        const toggleContainer = document.getElementById(key + 'Toggles');
+                        toggleContainer.innerHTML = '';
+                        Object.entries(stations).forEach(([stationId, stationName]) => {
+                            const toggle = document.createElement('div');
+                            toggle.className = 'station-toggle';
+                            toggle.innerHTML = `
+                                <input type="checkbox" id="${key}_station_${stationId}" checked>
+                                <label for="${key}_station_${stationId}" style="color: ${stationColors[stationId]}">
+                                    ${stationName}
+                                </label>
+                            `;
+                            toggleContainer.appendChild(toggle);
+                            
+                            toggle.querySelector('input').addEventListener('change', (e) => {
+                                const dataset = charts[key].data.datasets.find(
+                                    d => d.label === stationName
+                                );
+                                if (dataset) {
+                                    dataset.hidden = !e.target.checked;
+                                    charts[key].update();
+                                }
+                            });
+                        });
+                    });
+                }
+
+                // Update each chart with new data
+                Object.entries(chartConfigs).forEach(([key, config]) => {
+                    console.log(`Updating ${key} chart with data:`, data);
+                    const chart = charts[key];
+                    chart.data.datasets = Object.entries(data).map(([stationId, stationData]) => {
+                        console.log(`Processing station ${stationId} data:`, stationData);
+                        return {
+                            label: stations[stationId],
+                            data: stationData.map(d => ({
+                                x: new Date(d.rtc_time),
+                                y: d[key]
+                            })).sort((a, b) => a.x - b.x),
+                            borderColor: stationColors[stationId],
+                            backgroundColor: stationColors[stationId],
+                            tension: 0.1,
+                            hidden: !document.getElementById(`${key}_station_${stationId}`)?.checked
+                        };
+                    });
+                    chart.update('none'); // Use 'none' animation for smoother updates
+                });
+            })
+            .catch(error => {
+                console.error('Error updating charts:', error);
+                document.getElementById('noDataMessage').style.display = 'block';
+                document.getElementById('noDataMessage').textContent = 'Error loading data. Please try again later.';
             });
     }
 
