@@ -80,6 +80,15 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
+# Create tables on startup in production
+if FLASK_ENV == 'production':
+    with app.app_context():
+        try:
+            db.create_all()
+            app.logger.info('Database tables created successfully')
+        except Exception as e:
+            app.logger.error(f'Error creating database tables: {str(e)}')
+
 class DatabaseError(Exception):
     pass
 

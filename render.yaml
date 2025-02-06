@@ -39,5 +39,4 @@ services:
           "alerts": 30000
         }'
     healthCheckPath: /health
-    autoDeploy: true
-    preDeployCommand: flask db upgrade 
+    autoDeploy: true 
