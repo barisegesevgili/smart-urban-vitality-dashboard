@@ -20,17 +20,17 @@ services:
         sync: false
       - key: STATIONS
         value: '{
-          "1": {"name": "Englischer Garten", "location": {"lat": 48.1500, "lng": 11.5833}},
-          "2": {"name": "Garching TUM Campus", "location": {"lat": 48.2620, "lng": 11.6670}},
-          "3": {"name": "Garching Mensa", "location": {"lat": 48.2510, "lng": 11.6520}}
+          "1": {"name": "Garching/IOT-Lab", "location": {"lat": 262640368473626, "lng": 11.668331022751858}},
+          "2": {"name": "Garching/Basketball Court", "location": {"lat": 48.26364466819253, "lng": 11.668459013506432}},
+          "3": {"name": "Garching/IOT-Lab Balcony", "location": {"lat": 48.26271268490997, "lng": 11.66840813626192}}
         }'
       - key: THRESHOLDS
         value: '{
           "temperature": {"min": -15, "max": 35, "warning": 30},
           "humidity": {"min": 0, "max": 100},
-          "uv_index": {"min": 0, "max": 12, "warning": 6},
+          "uv_index": {"min": 0, "max": 12, "warning": 5},
           "air_quality": {"min": 0, "max": 100},
-          "co2e": {"min": 300, "max": 1000},
+          "co2e": {"min": 200, "max": 3000},
           "fill_level": {"min": 0, "max": 100, "warning": 20}
         }'
       - key: UPDATE_INTERVALS
