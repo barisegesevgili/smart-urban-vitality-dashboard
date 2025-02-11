@@ -209,6 +209,23 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: label + (config.unit ? ` (${config.unit})` : '')
+                    },
+                    legend: {
+                        position: 'top',
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function(context) {
+                                return new Date(context[0].raw.x).toLocaleString();
+                            }
+                        }
+                    }
+                },
                 interaction: {
                     intersect: false,
                     mode: 'index'
@@ -233,19 +250,6 @@
                         title: {
                             display: true,
                             text: label + (config.unit ? ` (${config.unit})` : '')
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        position: 'top',
-                        display: false
-                    },
-                    tooltip: {
-                        callbacks: {
-                            title: function(context) {
-                                return new Date(context[0].raw.x).toLocaleString();
-                            }
                         }
                     }
                 }
@@ -402,6 +406,9 @@
                                 })).sort((a, b) => a.x - b.x),
                                 borderColor: stationColors[stationId],
                                 backgroundColor: stationColors[stationId],
+                                pointStyle: 'circle',
+                                pointRadius: 5,
+                                pointHoverRadius: 8,
                                 tension: 0.1,
                                 hidden: !document.getElementById(`${key}_station_${stationId}`)?.checked
                             };
