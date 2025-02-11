@@ -21,7 +21,7 @@ STATIONS = {
 THRESHOLDS = {
     'temperature': {
         'min': -15,
-        'max': 35,
+        'max': 45,
         'warning': 30  # Temperature above this value will trigger a warning
     },
     'humidity': {

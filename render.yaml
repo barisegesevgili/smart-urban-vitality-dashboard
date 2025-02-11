@@ -26,7 +26,7 @@ services:
         }'
       - key: THRESHOLDS
         value: '{
-          "temperature": {"min": -15, "max": 35, "warning": 30},
+          "temperature": {"min": -15, "max": 45, "warning": 30},
           "humidity": {"min": 0, "max": 100},
           "uv_index": {"min": 0, "max": 12, "warning": 5},
           "air_quality": {"min": 0, "max": 100},
