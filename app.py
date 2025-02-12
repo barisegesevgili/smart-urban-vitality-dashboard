@@ -37,6 +37,7 @@ def load_config():
             thresholds_str = os.environ.get('THRESHOLDS', '{}')
             update_intervals_str = os.environ.get('UPDATE_INTERVALS', '{}')
             maps_key = os.environ.get('GOOGLE_MAPS_API_KEY')
+            maps_id = os.environ.get('GOOGLE_MAPS_MAP_ID')
             
             # Parse JSON strings, ensuring string keys for stations
             stations_dict = json.loads(stations_str)
@@ -46,6 +47,7 @@ def load_config():
                 'FLASK_ENV': current_env,
                 'DEBUG': os.environ.get('DEBUG', 'false').lower() == 'true',
                 'GOOGLE_MAPS_API_KEY': maps_key,
+                'GOOGLE_MAPS_MAP_ID': maps_id,
                 'STATIONS': stations,
                 'THRESHOLDS': json.loads(thresholds_str),
                 'UPDATE_INTERVALS': json.loads(update_intervals_str)
@@ -57,10 +59,11 @@ def load_config():
                 'FLASK_ENV': 'production',
                 'DEBUG': False,
                 'GOOGLE_MAPS_API_KEY': '',
+                'GOOGLE_MAPS_MAP_ID': '',
                 'STATIONS': {
-                    "1": {"name": "Englischer Garten", "location": {"lat": 48.1500, "lng": 11.5833}},
-                    "2": {"name": "Garching TUM Campus", "location": {"lat": 48.2620, "lng": 11.6670}},
-                    "3": {"name": "Garching Mensa", "location": {"lat": 48.2510, "lng": 11.6520}}
+                    "1": {"name": "Garching/IOT-Lab", "location": {"lat": 48.26264036847362, "lng": 11.668331022751858}},
+                    "2": {"name": "Garching/Basketball Court", "location": {"lat": 48.26364466819253, "lng": 11.668459013506432}},
+                    "3": {"name": "Garching/IOT-Lab Balcony", "location": {"lat": 48.26271268490997, "lng": 11.66840813626192}}
                 },
                 'THRESHOLDS': {},
                 'UPDATE_INTERVALS': {'charts': 30000, 'alerts': 30000}
@@ -70,7 +73,8 @@ def load_config():
             from config import (
                 FLASK_ENV, 
                 DEBUG, 
-                GOOGLE_MAPS_API_KEY, 
+                GOOGLE_MAPS_API_KEY,
+                GOOGLE_MAPS_MAP_ID,
                 STATIONS, 
                 THRESHOLDS,
                 UPDATE_INTERVALS
@@ -79,6 +83,7 @@ def load_config():
                 'FLASK_ENV': FLASK_ENV,
                 'DEBUG': DEBUG,
                 'GOOGLE_MAPS_API_KEY': GOOGLE_MAPS_API_KEY,
+                'GOOGLE_MAPS_MAP_ID': GOOGLE_MAPS_MAP_ID,
                 'STATIONS': STATIONS,
                 'THRESHOLDS': THRESHOLDS,
                 'UPDATE_INTERVALS': UPDATE_INTERVALS
@@ -89,10 +94,11 @@ def load_config():
                 'FLASK_ENV': 'development',
                 'DEBUG': True,
                 'GOOGLE_MAPS_API_KEY': '',
+                'GOOGLE_MAPS_MAP_ID': '',
                 'STATIONS': {
-                    "1": {"name": "Englischer Garten", "location": {"lat": 48.1500, "lng": 11.5833}},
-                    "2": {"name": "Garching TUM Campus", "location": {"lat": 48.2620, "lng": 11.6670}},
-                    "3": {"name": "Garching Mensa", "location": {"lat": 48.2510, "lng": 11.6520}}
+                    "1": {"name": "Garching/IOT-Lab", "location": {"lat": 48.26264036847362, "lng": 11.668331022751858}},
+                    "2": {"name": "Garching/Basketball Court", "location": {"lat": 48.26364466819253, "lng": 11.668459013506432}},
+                    "3": {"name": "Garching/IOT-Lab Balcony", "location": {"lat": 48.26271268490997, "lng": 11.66840813626192}}
                 },
                 'THRESHOLDS': {},
                 'UPDATE_INTERVALS': {'charts': 30000, 'alerts': 30000}
@@ -102,6 +108,7 @@ config = load_config()
 FLASK_ENV = config['FLASK_ENV']
 DEBUG = config['DEBUG']
 GOOGLE_MAPS_API_KEY = config['GOOGLE_MAPS_API_KEY']
+GOOGLE_MAPS_MAP_ID = config['GOOGLE_MAPS_MAP_ID']
 STATIONS = config['STATIONS']
 THRESHOLDS = config['THRESHOLDS']
 UPDATE_INTERVALS = config['UPDATE_INTERVALS']
@@ -306,11 +313,13 @@ def station_locations():
             app.logger.error('Google Maps API key is missing or empty')
             return render_template('station_locations.html',
                                 google_maps_api_key='',
+                                google_maps_map_id='',
                                 stations=STATIONS,
                                 error_message="Google Maps API key is not configured properly.")
         
         return render_template('station_locations.html', 
                              google_maps_api_key=GOOGLE_MAPS_API_KEY,
+                             google_maps_map_id=GOOGLE_MAPS_MAP_ID,
                              stations=STATIONS)
     except Exception as e:
         app.logger.error(f'Error rendering station locations page: {str(e)}')

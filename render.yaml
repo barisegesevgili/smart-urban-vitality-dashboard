@@ -16,6 +16,8 @@ services:
       # Secret environment variables to be set in Render dashboard
       - key: GOOGLE_MAPS_API_KEY
         sync: false
+      - key: GOOGLE_MAPS_MAP_ID
+        sync: false
       - key: SECRET_KEY
         sync: false
       - key: STATIONS
