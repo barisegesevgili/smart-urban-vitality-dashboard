@@ -7,6 +7,7 @@ DATABASE_URL = 'sqlite:///app.db'  # Replace with your database URL
 
 # Google Maps Configuration
 GOOGLE_MAPS_API_KEY = 'YOUR_GOOGLE_MAPS_API_KEY'  # Replace with your API key
+GOOGLE_MAPS_MAP_ID = 'YOUR_GOOGLE_MAPS_MAP_ID'  # Create this in Google Cloud Console
 
 # Station Configuration
 STATIONS = {
