@@ -33,21 +33,33 @@ def load_config():
     
     if current_env == 'production':
         try:
+            # Log all environment variables for debugging
+            app.logger.info('Environment variables:')
+            for key in ['STATIONS', 'THRESHOLDS', 'UPDATE_INTERVALS', 'GOOGLE_MAPS_API_KEY']:
+                value = os.environ.get(key, 'NOT_SET')
+                masked_value = value[:10] + '...' if len(value) > 10 else value
+                app.logger.info(f'{key}: {masked_value}')
+            
             stations_str = os.environ.get('STATIONS', '{}')
             thresholds_str = os.environ.get('THRESHOLDS', '{}')
             update_intervals_str = os.environ.get('UPDATE_INTERVALS', '{}')
             maps_key = os.environ.get('GOOGLE_MAPS_API_KEY')
             
             # Log the raw values for debugging
-            app.logger.info(f'Raw STATIONS env var: {stations_str}')
-            app.logger.info(f'Raw THRESHOLDS env var: {thresholds_str}')
-            app.logger.info(f'Raw UPDATE_INTERVALS env var: {update_intervals_str}')
-            app.logger.info(f'GOOGLE_MAPS_API_KEY present: {maps_key is not None}')
-            app.logger.info(f'GOOGLE_MAPS_API_KEY length: {len(maps_key) if maps_key else 0}')
+            app.logger.info(f'Raw STATIONS env var type: {type(stations_str)}')
+            app.logger.info(f'Raw STATIONS env var length: {len(stations_str)}')
+            app.logger.info(f'Raw STATIONS env var first 50 chars: {stations_str[:50]}')
             
             # Parse JSON strings, ensuring string keys for stations
-            stations_dict = json.loads(stations_str)
+            try:
+                stations_dict = json.loads(stations_str)
+                app.logger.info(f'Successfully parsed STATIONS JSON. Keys: {list(stations_dict.keys())}')
+            except json.JSONDecodeError as je:
+                app.logger.error(f'JSON decode error for STATIONS: {str(je)}')
+                raise
+            
             stations = {str(k): v for k, v in stations_dict.items()}
+            app.logger.info(f'Final STATIONS dict keys: {list(stations.keys())}')
             
             return {
                 'FLASK_ENV': current_env,
@@ -308,27 +320,33 @@ def get_data():
 @app.route('/station-locations')
 def station_locations():
     try:
-        app.logger.info('Accessing station locations page')
-        app.logger.info(f'FLASK_ENV: {FLASK_ENV}')
-        app.logger.info(f'Environment variables:')
-        app.logger.info(f'- FLASK_ENV: {os.environ.get("FLASK_ENV")}')
-        app.logger.info(f'- GOOGLE_MAPS_API_KEY present: {bool(os.environ.get("GOOGLE_MAPS_API_KEY"))}')
-        app.logger.info(f'Config values:')
-        app.logger.info(f'- GOOGLE_MAPS_API_KEY length: {len(GOOGLE_MAPS_API_KEY)}')
+        app.logger.info('Accessing station locations endpoint')
+        app.logger.info(f'Current STATIONS config: {json.dumps(STATIONS)}')
+        app.logger.info(f'Google Maps API Key present: {bool(GOOGLE_MAPS_API_KEY)}')
+        
+        if not STATIONS:
+            app.logger.error('No stations configured')
+            return render_template('station_locations.html', 
+                                error_message='No stations are currently configured.',
+                                stations={},
+                                google_maps_api_key=GOOGLE_MAPS_API_KEY)
         
         if not GOOGLE_MAPS_API_KEY:
-            app.logger.error('Google Maps API key is missing or empty')
+            app.logger.error('Google Maps API key is missing')
             return render_template('station_locations.html',
-                                google_maps_api_key='',
+                                error_message='Google Maps API key is not configured.',
                                 stations=STATIONS,
-                                error_message="Google Maps API key is not configured properly.")
+                                google_maps_api_key='')
         
-        return render_template('station_locations.html', 
-                             google_maps_api_key=GOOGLE_MAPS_API_KEY,
-                             stations=STATIONS)
+        return render_template('station_locations.html',
+                             stations=STATIONS,
+                             google_maps_api_key=GOOGLE_MAPS_API_KEY)
     except Exception as e:
-        app.logger.error(f'Error rendering station locations page: {str(e)}')
-        return jsonify({"status": "error", "message": "Internal server error"}), 500
+        app.logger.error(f'Error in station_locations route: {str(e)}')
+        return render_template('station_locations.html',
+                             error_message=f'An error occurred: {str(e)}',
+                             stations={},
+                             google_maps_api_key='')
 
 @app.route('/sensor_data/<station_id>', methods=['GET'])
 def get_sensor_data(station_id):
