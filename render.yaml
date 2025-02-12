@@ -19,24 +19,10 @@ services:
       - key: SECRET_KEY
         sync: false
       - key: STATIONS
-        value: '{
-          "1": {"name": "Garching/IOT-Lab", "location": {"lat": 48.26264036847362, "lng": 11.668331022751858}},
-          "2": {"name": "Garching/Basketball Court", "location": {"lat": 48.26364466819253, "lng": 11.668459013506432}},
-          "3": {"name": "Garching/IOT-Lab Balcony", "location": {"lat": 48.26271268490997, "lng": 11.66840813626192}}
-        }'
+        value: '{"1":{"name":"Garching/IOT-Lab","location":{"lat":48.26264036847362,"lng":11.668331022751858}},"2":{"name":"Garching/Basketball Court","location":{"lat":48.26364466819253,"lng":11.668459013506432}},"3":{"name":"Garching/IOT-Lab Balcony","location":{"lat":48.26271268490997,"lng":11.66840813626192}}}'
       - key: THRESHOLDS
-        value: '{
-          "temperature": {"min": -15, "max": 45, "warning": 30},
-          "humidity": {"min": 0, "max": 100},
-          "uv_index": {"min": 0, "max": 12, "warning": 5},
-          "air_quality": {"min": 0, "max": 100},
-          "co2e": {"min": 200, "max": 3000},
-          "fill_level": {"min": 0, "max": 100, "warning": 20}
-        }'
+        value: '{"temperature":{"min":-15,"max":45,"warning":30},"humidity":{"min":0,"max":100},"uv_index":{"min":0,"max":12,"warning":5},"air_quality":{"min":0,"max":100},"co2e":{"min":200,"max":3000},"fill_level":{"min":0,"max":100,"warning":20}}'
       - key: UPDATE_INTERVALS
-        value: '{
-          "charts": 30000,
-          "alerts": 30000
-        }'
+        value: '{"charts":30000,"alerts":30000}'
     healthCheckPath: /health
     autoDeploy: true 
