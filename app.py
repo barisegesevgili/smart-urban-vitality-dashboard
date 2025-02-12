@@ -38,13 +38,6 @@ def load_config():
             update_intervals_str = os.environ.get('UPDATE_INTERVALS', '{}')
             maps_key = os.environ.get('GOOGLE_MAPS_API_KEY')
             
-            # Log the raw values for debugging
-            app.logger.info(f'Raw STATIONS env var: {stations_str}')
-            app.logger.info(f'Raw THRESHOLDS env var: {thresholds_str}')
-            app.logger.info(f'Raw UPDATE_INTERVALS env var: {update_intervals_str}')
-            app.logger.info(f'GOOGLE_MAPS_API_KEY present: {maps_key is not None}')
-            app.logger.info(f'GOOGLE_MAPS_API_KEY length: {len(maps_key) if maps_key else 0}')
-            
             # Parse JSON strings, ensuring string keys for stations
             stations_dict = json.loads(stations_str)
             stations = {str(k): v for k, v in stations_dict.items()}
@@ -309,13 +302,6 @@ def get_data():
 def station_locations():
     try:
         app.logger.info('Accessing station locations page')
-        app.logger.info(f'FLASK_ENV: {FLASK_ENV}')
-        app.logger.info(f'Environment variables:')
-        app.logger.info(f'- FLASK_ENV: {os.environ.get("FLASK_ENV")}')
-        app.logger.info(f'- GOOGLE_MAPS_API_KEY present: {bool(os.environ.get("GOOGLE_MAPS_API_KEY"))}')
-        app.logger.info(f'Config values:')
-        app.logger.info(f'- GOOGLE_MAPS_API_KEY length: {len(GOOGLE_MAPS_API_KEY)}')
-        
         if not GOOGLE_MAPS_API_KEY:
             app.logger.error('Google Maps API key is missing or empty')
             return render_template('station_locations.html',
@@ -333,7 +319,6 @@ def station_locations():
 @app.route('/sensor_data/<station_id>', methods=['GET'])
 def get_sensor_data(station_id):
     try:
-        app.logger.info(f'Fetching data for station {station_id}')
         sensor_data = SensorData.query.filter_by(station_id=station_id).order_by(SensorData.rtc_time.desc()).first()
         
         if not sensor_data:
@@ -362,7 +347,6 @@ def get_sensor_data(station_id):
             "bme_iaq_accuracy": sensor_data.bme_iaq_accuracy,
             "status": "success"
         }
-        app.logger.info(f'Successfully retrieved data for station {station_id}')
         return jsonify(data)
         
     except Exception as e:

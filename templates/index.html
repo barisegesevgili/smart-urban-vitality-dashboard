@@ -394,20 +394,16 @@
     }
 
     function checkAlerts(data, stations) {
-        console.log('Checking alerts with data:', data);
-        console.log('Available stations:', stations);
         const alerts = [];
         
         try {
             Object.entries(data).forEach(([stationId, stationData]) => {
                 if (!stationData || stationData.length === 0) {
-                    console.log(`No data for station ${stationId}`);
                     return;
                 }
                 
                 // Skip if station not found in configuration
                 if (!stations[stationId]) {
-                    console.log(`Station ${stationId} not found in configuration`);
                     return;
                 }
                 
@@ -415,8 +411,6 @@
                 const sortedData = [...stationData].sort((a, b) => new Date(b.rtc_time) - new Date(a.rtc_time));
                 const latestData = sortedData[0];
                 const stationName = stations[stationId].name;
-                
-                console.log(`Checking latest data for station ${stationName}:`, latestData);
                 
                 // Check temperature independently
                 if (latestData.temperature >= chartConfigs.temperature.warning.value) {
@@ -460,7 +454,6 @@
                 }
             });
 
-            console.log('Generated alerts:', alerts);
             const alertsPanel = document.getElementById('alertsPanel');
             const alertsList = document.getElementById('alertsList');
             

@@ -7,18 +7,10 @@
     // Store the API key in a variable
     const GOOGLE_MAPS_API_KEY = '{{ google_maps_api_key }}';
     
-    // Add debug logging
-    console.log('API Key length:', GOOGLE_MAPS_API_KEY.length);
-    console.log('API Key first 5 chars:', GOOGLE_MAPS_API_KEY ? GOOGLE_MAPS_API_KEY.substring(0, 5) : 'none');
-    console.log('Is API Key undefined?', typeof GOOGLE_MAPS_API_KEY === 'undefined');
-    console.log('Is API Key null?', GOOGLE_MAPS_API_KEY === null);
-    console.log('Is API Key empty string?', GOOGLE_MAPS_API_KEY === '');
-    
     // Load the Google Maps script dynamically
     function loadGoogleMapsScript() {
         const script = document.createElement('script');
         script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}`;
-        console.log('Loading Maps with URL:', script.src.replace(GOOGLE_MAPS_API_KEY, '***'));
         script.onerror = function(error) {
             console.error('Error loading Google Maps script:', error);
         };
