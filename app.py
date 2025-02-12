@@ -302,7 +302,7 @@ def get_data():
 def station_locations():
     try:
         app.logger.info('Accessing station locations page')
-        #app.logger.info(f'Using Google Maps API Key: {GOOGLE_MAPS_API_KEY}')
+        app.logger.info(f'Using Google Maps API Key: {GOOGLE_MAPS_API_KEY[:5]}...')  # Only log first 5 chars for security
         return render_template('station_locations.html', 
                              google_maps_api_key=GOOGLE_MAPS_API_KEY,
                              stations=STATIONS)
