@@ -28,10 +28,73 @@ app.logger.info('Smart Urban Vitality startup')
 
 def load_config():
     """Load configuration from environment variables in production, fall back to config.py in development"""
-    current_env = os.environ.get('FLASK_ENV')
+    current_env = os.environ.get('FLASK_ENV', 'development')
     app.logger.info(f'Current FLASK_ENV: {current_env}')
     
-    if current_env == 'production':
+    if current_env == 'development':
+        try:
+            # First try to load from config.py
+            app.logger.info('Attempting to load configuration from config.py')
+            from config import (
+                FLASK_ENV, 
+                DEBUG, 
+                GOOGLE_MAPS_API_KEY,
+                GOOGLE_MAPS_MAP_ID,
+                STATIONS, 
+                THRESHOLDS,
+                UPDATE_INTERVALS
+            )
+            app.logger.info('Successfully loaded configuration from config.py')
+            return {
+                'FLASK_ENV': FLASK_ENV,
+                'DEBUG': DEBUG,
+                'GOOGLE_MAPS_API_KEY': GOOGLE_MAPS_API_KEY,
+                'GOOGLE_MAPS_MAP_ID': GOOGLE_MAPS_MAP_ID,
+                'STATIONS': STATIONS,
+                'THRESHOLDS': THRESHOLDS,
+                'UPDATE_INTERVALS': UPDATE_INTERVALS
+            }
+        except ImportError:
+            app.logger.info('config.py not found, attempting to load from environment variables')
+            try:
+                # If config.py is not found, try environment variables
+                stations_str = os.environ.get('STATIONS', '{}')
+                thresholds_str = os.environ.get('THRESHOLDS', '{}')
+                update_intervals_str = os.environ.get('UPDATE_INTERVALS', '{}')
+                maps_key = os.environ.get('GOOGLE_MAPS_API_KEY')
+                maps_id = os.environ.get('GOOGLE_MAPS_MAP_ID')
+                
+                # Parse JSON strings, ensuring string keys for stations
+                stations_dict = json.loads(stations_str)
+                stations = {str(k): v for k, v in stations_dict.items()}
+                
+                app.logger.info('Successfully loaded configuration from environment variables')
+                return {
+                    'FLASK_ENV': current_env,
+                    'DEBUG': os.environ.get('DEBUG', 'true').lower() == 'true',
+                    'GOOGLE_MAPS_API_KEY': maps_key,
+                    'GOOGLE_MAPS_MAP_ID': maps_id,
+                    'STATIONS': stations,
+                    'THRESHOLDS': json.loads(thresholds_str),
+                    'UPDATE_INTERVALS': json.loads(update_intervals_str)
+                }
+            except json.JSONDecodeError as e:
+                app.logger.error(f'Error parsing configuration JSON: {str(e)}')
+                # Fallback to default configurations
+                return {
+                    'FLASK_ENV': 'development',
+                    'DEBUG': True,
+                    'GOOGLE_MAPS_API_KEY': '',
+                    'GOOGLE_MAPS_MAP_ID': '',
+                    'STATIONS': {
+                        "1": {"name": "Garching/IOT-Lab", "location": {"lat": 48.26264036847362, "lng": 11.668331022751858}},
+                        "2": {"name": "Garching/Basketball Court", "location": {"lat": 48.26364466819253, "lng": 11.668459013506432}},
+                        "3": {"name": "Garching/IOT-Lab Balcony", "location": {"lat": 48.26271268490997, "lng": 11.66840813626192}}
+                    },
+                    'THRESHOLDS': {},
+                    'UPDATE_INTERVALS': {'charts': 30000, 'alerts': 30000}
+                }
+    else:  # production mode
         try:
             stations_str = os.environ.get('STATIONS', '{}')
             thresholds_str = os.environ.get('THRESHOLDS', '{}')
@@ -43,6 +106,7 @@ def load_config():
             stations_dict = json.loads(stations_str)
             stations = {str(k): v for k, v in stations_dict.items()}
             
+            app.logger.info('Successfully loaded configuration from environment variables')
             return {
                 'FLASK_ENV': current_env,
                 'DEBUG': os.environ.get('DEBUG', 'false').lower() == 'true',
@@ -58,41 +122,6 @@ def load_config():
             return {
                 'FLASK_ENV': 'production',
                 'DEBUG': False,
-                'GOOGLE_MAPS_API_KEY': '',
-                'GOOGLE_MAPS_MAP_ID': '',
-                'STATIONS': {
-                    "1": {"name": "Garching/IOT-Lab", "location": {"lat": 48.26264036847362, "lng": 11.668331022751858}},
-                    "2": {"name": "Garching/Basketball Court", "location": {"lat": 48.26364466819253, "lng": 11.668459013506432}},
-                    "3": {"name": "Garching/IOT-Lab Balcony", "location": {"lat": 48.26271268490997, "lng": 11.66840813626192}}
-                },
-                'THRESHOLDS': {},
-                'UPDATE_INTERVALS': {'charts': 30000, 'alerts': 30000}
-            }
-    else:
-        try:
-            from config import (
-                FLASK_ENV, 
-                DEBUG, 
-                GOOGLE_MAPS_API_KEY,
-                GOOGLE_MAPS_MAP_ID,
-                STATIONS, 
-                THRESHOLDS,
-                UPDATE_INTERVALS
-            )
-            return {
-                'FLASK_ENV': FLASK_ENV,
-                'DEBUG': DEBUG,
-                'GOOGLE_MAPS_API_KEY': GOOGLE_MAPS_API_KEY,
-                'GOOGLE_MAPS_MAP_ID': GOOGLE_MAPS_MAP_ID,
-                'STATIONS': STATIONS,
-                'THRESHOLDS': THRESHOLDS,
-                'UPDATE_INTERVALS': UPDATE_INTERVALS
-            }
-        except ImportError:
-            # If config.py doesn't exist, use default development values
-            return {
-                'FLASK_ENV': 'development',
-                'DEBUG': True,
                 'GOOGLE_MAPS_API_KEY': '',
                 'GOOGLE_MAPS_MAP_ID': '',
                 'STATIONS': {
