@@ -10,27 +10,49 @@ from logging.handlers import RotatingFileHandler
 import csv
 from io import StringIO
 
+# Initialize Flask app first
+app = Flask(__name__)
+CORS(app)
+
+# Configure logging
+if not os.path.exists('logs'):
+    os.mkdir('logs')
+file_handler = RotatingFileHandler('logs/smart_urban_vitality.log', maxBytes=10240, backupCount=10)
+file_handler.setFormatter(logging.Formatter(
+    '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+))
+file_handler.setLevel(logging.INFO)
+app.logger.addHandler(file_handler)
+app.logger.setLevel(logging.INFO)
+app.logger.info('Smart Urban Vitality startup')
+
 def load_config():
     """Load configuration from environment variables in production, fall back to config.py in development"""
-    if os.environ.get('FLASK_ENV') == 'production':
+    current_env = os.environ.get('FLASK_ENV')
+    app.logger.info(f'Current FLASK_ENV: {current_env}')
+    
+    if current_env == 'production':
         try:
             stations_str = os.environ.get('STATIONS', '{}')
             thresholds_str = os.environ.get('THRESHOLDS', '{}')
             update_intervals_str = os.environ.get('UPDATE_INTERVALS', '{}')
+            maps_key = os.environ.get('GOOGLE_MAPS_API_KEY')
             
             # Log the raw values for debugging
             app.logger.info(f'Raw STATIONS env var: {stations_str}')
             app.logger.info(f'Raw THRESHOLDS env var: {thresholds_str}')
             app.logger.info(f'Raw UPDATE_INTERVALS env var: {update_intervals_str}')
+            app.logger.info(f'GOOGLE_MAPS_API_KEY present: {maps_key is not None}')
+            app.logger.info(f'GOOGLE_MAPS_API_KEY length: {len(maps_key) if maps_key else 0}')
             
             # Parse JSON strings, ensuring string keys for stations
             stations_dict = json.loads(stations_str)
             stations = {str(k): v for k, v in stations_dict.items()}
             
             return {
-                'FLASK_ENV': os.environ.get('FLASK_ENV', 'production'),
+                'FLASK_ENV': current_env,
                 'DEBUG': os.environ.get('DEBUG', 'false').lower() == 'true',
-                'GOOGLE_MAPS_API_KEY': os.environ.get('GOOGLE_MAPS_API_KEY'),
+                'GOOGLE_MAPS_API_KEY': maps_key,
                 'STATIONS': stations,
                 'THRESHOLDS': json.loads(thresholds_str),
                 'UPDATE_INTERVALS': json.loads(update_intervals_str)
@@ -90,21 +112,6 @@ GOOGLE_MAPS_API_KEY = config['GOOGLE_MAPS_API_KEY']
 STATIONS = config['STATIONS']
 THRESHOLDS = config['THRESHOLDS']
 UPDATE_INTERVALS = config['UPDATE_INTERVALS']
-
-app = Flask(__name__)
-CORS(app)
-
-# Configure logging
-if not os.path.exists('logs'):
-    os.mkdir('logs')
-file_handler = RotatingFileHandler('logs/smart_urban_vitality.log', maxBytes=10240, backupCount=10)
-file_handler.setFormatter(logging.Formatter(
-    '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
-))
-file_handler.setLevel(logging.INFO)
-app.logger.addHandler(file_handler)
-app.logger.setLevel(logging.INFO)
-app.logger.info('Smart Urban Vitality startup')
 
 # Database configuration
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -302,7 +309,20 @@ def get_data():
 def station_locations():
     try:
         app.logger.info('Accessing station locations page')
-        app.logger.info(f'Using Google Maps API Key: {GOOGLE_MAPS_API_KEY[:5]}...')  # Only log first 5 chars for security
+        app.logger.info(f'FLASK_ENV: {FLASK_ENV}')
+        app.logger.info(f'Environment variables:')
+        app.logger.info(f'- FLASK_ENV: {os.environ.get("FLASK_ENV")}')
+        app.logger.info(f'- GOOGLE_MAPS_API_KEY present: {bool(os.environ.get("GOOGLE_MAPS_API_KEY"))}')
+        app.logger.info(f'Config values:')
+        app.logger.info(f'- GOOGLE_MAPS_API_KEY length: {len(GOOGLE_MAPS_API_KEY)}')
+        
+        if not GOOGLE_MAPS_API_KEY:
+            app.logger.error('Google Maps API key is missing or empty')
+            return render_template('station_locations.html',
+                                google_maps_api_key='',
+                                stations=STATIONS,
+                                error_message="Google Maps API key is not configured properly.")
+        
         return render_template('station_locations.html', 
                              google_maps_api_key=GOOGLE_MAPS_API_KEY,
                              stations=STATIONS)
