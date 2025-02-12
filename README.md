@@ -51,6 +51,7 @@ cp config.template.py config.py
 ```
 Edit `config.py` with your settings:
 - Add your Google Maps API key
+- Add your Google Maps Map ID (create one in Google Cloud Console)
 - Configure station locations
 - Adjust sensor thresholds
 - Set update intervals
@@ -75,15 +76,34 @@ The application is configured to run on Render or similar platforms. Required en
    - `FLASK_ENV`: Set to 'production'
    - `DEBUG`: Set to 'false'
    - `GOOGLE_MAPS_API_KEY`: Your Google Maps API key
+   - `GOOGLE_MAPS_MAP_ID`: Your Google Maps Map ID (for custom map styling)
    - `SECRET_KEY`: A secure secret key for the application
    - `STATIONS`: JSON configuration for your monitoring stations
 
-2. Example STATIONS configuration:
+2. Setting up Google Maps on Render:
+   - Go to your Render dashboard
+   - Navigate to the Environment Variables section
+   - Add both `GOOGLE_MAPS_API_KEY` and `GOOGLE_MAPS_MAP_ID`
+   - Ensure your Google Cloud Project has the following APIs enabled:
+     - Maps JavaScript API
+     - Maps Styling API (for custom map styles)
+   - Make sure your API key has the necessary permissions for these services
+
+3. Example STATIONS configuration:
 ```json
 {
-  "1": {"name": "Englischer Garten", "location": {"lat": 48.1500, "lng": 11.5833}},
-  "2": {"name": "Garching TUM Campus", "location": {"lat": 48.2620, "lng": 11.6670}},
-  "3": {"name": "Garching Mensa", "location": {"lat": 48.2510, "lng": 11.6520}}
+    1: {
+        'name': 'Garching/IOT-Lab',
+        'location': {'lat': 48.26264036847362, 'lng': 11.668331022751858}
+    },
+    2: {
+        'name': 'Garching/Basketball Court',
+        'location': {'lat': 48.26364466819253, 'lng': 11.668459013506432}
+    },
+    3: {
+        'name': 'Garching/IOT-Lab Balcony',
+        'location': {'lat': 48.26271268490997, 'lng': 11.66840813626192}
+    }
 }
 ```
 
