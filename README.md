@@ -25,8 +25,8 @@ A real-time monitoring dashboard for urban environmental sensors, built with Fla
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/barisegesevgili/Isolated-WebServer.git
-cd Isolated-WebServer
+git clone https://github.com/barisegesevgili/smart-urban-vitality-dashboard.git
+cd smart-urban-vitality-dashboard
 ```
 
 2. Create and activate virtual environment:
@@ -167,12 +167,8 @@ class SensorData:
 
 ## Contributing
 
-1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
+1. Send good wishes
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details 
+This project is licensed under the BES License - see me at München for details 
