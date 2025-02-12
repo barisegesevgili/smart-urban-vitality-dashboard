@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template, redirect, url_for
+from flask import Flask, request, jsonify, render_template, redirect, url_for, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_cors import CORS
@@ -7,6 +7,8 @@ import os
 import json
 import logging
 from logging.handlers import RotatingFileHandler
+import csv
+from io import StringIO
 
 def load_config():
     """Load configuration from environment variables in production, fall back to config.py in development"""
@@ -154,14 +156,19 @@ def validate_sensor_data(data):
             raise ValidationError(f"Missing required field: {field}")
     
     try:
-        float(data['temperature'])
-        float(data['humidity'])
-        float(data['uv_index'])
-        float(data['air_quality'])
-        float(data['co2e'])
-        float(data['fill_level'])
-        int(data['bme_iaq_accuracy'])
-        int(data['station_id'])
+        # Handle numeric fields that can be NaN
+        float_fields = ['temperature', 'humidity', 'uv_index', 'air_quality', 'co2e', 'fill_level']
+        for field in float_fields:
+            value = data[field]
+            # Check if value is already NaN string
+            if isinstance(value, str) and value.upper() == 'NAN':
+                data[field] = float('nan')
+            else:
+                data[field] = float(value)
+        
+        # These fields must not be NaN
+        data['bme_iaq_accuracy'] = int(data['bme_iaq_accuracy'])
+        data['station_id'] = int(data['station_id'])
     except (ValueError, TypeError) as e:
         raise ValidationError(f"Invalid data type in fields: {str(e)}")
 
@@ -276,7 +283,7 @@ def get_data():
             })
         
         app.logger.info(f'Found data for stations: {list(stations_data.keys())}')
-        app.logger.info(f'STATIONS config: {STATIONS}')
+        #app.logger.info(f'STATIONS config: {STATIONS}')
         
         response_data = {
             "stations": STATIONS,
@@ -284,7 +291,7 @@ def get_data():
             "thresholds": THRESHOLDS,
             "update_intervals": UPDATE_INTERVALS
         }
-        app.logger.info(f'Sending response: {json.dumps(response_data)}')
+        #app.logger.info(f'Sending response: {json.dumps(response_data)}')
         return jsonify(response_data)
         
     except Exception as e:
@@ -295,6 +302,7 @@ def get_data():
 def station_locations():
     try:
         app.logger.info('Accessing station locations page')
+        #app.logger.info(f'Using Google Maps API Key: {GOOGLE_MAPS_API_KEY}')
         return render_template('station_locations.html', 
                              google_maps_api_key=GOOGLE_MAPS_API_KEY,
                              stations=STATIONS)
@@ -347,7 +355,7 @@ def get_sensor_data(station_id):
 @app.route('/logs')
 def logs():
     try:
-        return render_template('logs.html')
+        return render_template('logs.html', stations=STATIONS)
     except Exception as e:
         app.logger.error(f'Error rendering logs page: {str(e)}')
         return jsonify({"status": "error", "message": "Internal server error"}), 500
@@ -369,6 +377,7 @@ def logs_data():
         sensor_data = query.limit(limit).all()
         
         data = [{
+            "id": data.id,
             "timestamp": data.timestamp.isoformat(),
             "rtc_time": data.rtc_time.isoformat(),
             "temperature": data.temperature,
@@ -395,18 +404,29 @@ def delete_data():
         return jsonify({"status": "error", "message": "Delete operation only allowed in development environment"}), 403
         
     try:
-        delete_type = request.args.get('type', 'all')
-        days = request.args.get('days', type=int)
+        if request.content_type == 'application/json':
+            data = request.json
+            delete_type = data.get('type', 'all')
+        else:
+            delete_type = request.args.get('type', 'all')
+            
+        minutes = request.args.get('minutes', type=int)
 
         if delete_type == 'all':
             # Delete all data
             num_deleted = db.session.query(SensorData).delete()
-        elif delete_type == 'older_than' and days is not None:
-            # Delete data older than specified days
-            cutoff_date = datetime.now() - timedelta(days=days)
+        elif delete_type == 'older_than' and minutes is not None:
+            # Delete data older than specified minutes
+            cutoff_time = datetime.now() - timedelta(minutes=minutes)
             num_deleted = db.session.query(SensorData).filter(
-                SensorData.rtc_time < cutoff_date
+                SensorData.rtc_time < cutoff_time
             ).delete()
+        elif delete_type == 'selected' and 'ids' in request.json:
+            # Delete selected logs
+            selected_ids = request.json['ids']
+            num_deleted = db.session.query(SensorData).filter(
+                SensorData.id.in_(selected_ids)
+            ).delete(synchronize_session='fetch')
         else:
             raise ValidationError("Invalid delete parameters")
 
@@ -429,6 +449,54 @@ def delete_data():
 @app.route('/health')
 def health():
     return jsonify({"status": "healthy"}), 200
+
+@app.route('/export_csv')
+def export_csv():
+    try:
+        # Query all sensor data
+        sensor_data = SensorData.query.order_by(SensorData.rtc_time.desc()).all()
+        
+        if not sensor_data:
+            return jsonify({"status": "error", "message": "No data to export"}), 404
+
+        # Create CSV in memory
+        si = StringIO()
+        writer = csv.writer(si)
+        
+        # Write headers
+        writer.writerow([
+            'Timestamp', 'RTC Time', 'Station ID', 'Temperature (°C)', 
+            'Humidity (%)', 'UV Index', 'Air Quality (%)', 
+            'CO2e (ppm)', 'Fill Level (%)', 'BME IAQ Accuracy'
+        ])
+        
+        # Write data
+        for data in sensor_data:
+            writer.writerow([
+                data.timestamp.isoformat(),
+                data.rtc_time.isoformat(),
+                data.station_id,
+                data.temperature,
+                data.humidity,
+                data.uv_index,
+                data.air_quality,
+                data.co2e,
+                data.fill_level,
+                data.bme_iaq_accuracy
+            ])
+        
+        # Prepare the response
+        output = si.getvalue()
+        si.close()
+        
+        return output, 200, {
+            'Content-Type': 'text/csv',
+            'Content-Disposition': f'attachment; filename=sensor_data_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
+        }
+        
+    except Exception as e:
+        app.logger.error(f'Error exporting CSV: {str(e)}')
+        return jsonify({"status": "error", "message": "Error generating CSV"}), 500
 
 if __name__ == '__main__':
     app.run(debug=DEBUG)

@@ -3,7 +3,174 @@
 {% block title %}Smart-Urban-Vitality - Station Locations{% endblock %}
 
 {% block extra_head %}
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBNF6uExCzzggGGH2rlu2ljvf6SfOINtbY"></script>
+<script>
+    // Store the API key in a variable
+    const GOOGLE_MAPS_API_KEY = '{{ google_maps_api_key }}';
+    
+    // Load the Google Maps script dynamically
+    function loadGoogleMapsScript() {
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}`;
+        script.onload = initMap;
+        document.head.appendChild(script);
+    }
+
+    function calculateCenterOfGravity(stations) {
+        const coordinates = Object.values(stations).map(station => station.location);
+        if (coordinates.length === 0) {
+            // Default to Munich center if no stations
+            return { lat: 48.137154, lng: 11.576124 };
+        }
+        
+        const totalLat = coordinates.reduce((sum, coord) => sum + coord.lat, 0);
+        const totalLng = coordinates.reduce((sum, coord) => sum + coord.lng, 0);
+        
+        return {
+            lat: totalLat / coordinates.length,
+            lng: totalLng / coordinates.length
+        };
+    }
+
+    function calculateBounds(stations) {
+        const coordinates = Object.values(stations).map(station => station.location);
+        if (coordinates.length === 0) {
+            return null;
+        }
+        
+        const bounds = new google.maps.LatLngBounds();
+        coordinates.forEach(coord => {
+            bounds.extend(new google.maps.LatLng(coord.lat, coord.lng));
+        });
+        return bounds;
+    }
+
+    function initMap() {
+        console.log('Initializing map...');
+        const stationsData = JSON.parse('{{ stations|tojson|safe }}');
+        
+        const map = new google.maps.Map(document.getElementById('map'), {
+            zoom: 13, // Default zoom level
+            center: calculateCenterOfGravity(stationsData),
+            styles: [
+                {
+                    featureType: "poi",
+                    elementType: "labels",
+                    stylers: [{ visibility: "off" }]
+                }
+            ]
+        });
+
+        const stations = Object.entries(stationsData).map(([id, station]) => ({
+            id: parseInt(id),
+            name: station.name,
+            position: station.location
+        }));
+
+        stations.forEach(station => {
+            console.log(`Creating marker for station ${station.name}`);
+            const marker = new google.maps.Marker({
+                position: station.position,
+                map: map,
+                title: station.name,
+                animation: google.maps.Animation.DROP
+            });
+
+            marker.addListener('click', () => {
+                console.log(`Fetching data for station ${station.id}`);
+                fetch(`/sensor_data/${station.id}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Received data:', data);
+                        const content = createInfoWindowContent(station, data);
+                        const infoWindow = new google.maps.InfoWindow({
+                            content: content
+                        });
+                        infoWindow.open(map, marker);
+                    })
+                    .catch(error => {
+                        console.error('Error fetching station data:', error);
+                        const content = createInfoWindowContent(station, { status: 'no_data' });
+                        const infoWindow = new google.maps.InfoWindow({
+                            content: content
+                        });
+                        infoWindow.open(map, marker);
+                    });
+            });
+        });
+
+        // Fit the map to show all markers
+        const bounds = calculateBounds(stationsData);
+        if (bounds) {
+            map.fitBounds(bounds);
+            // Add a small padding
+            map.setZoom(map.getZoom() - 0.5);
+        }
+
+        stations.forEach(station => {
+            console.log(`Creating marker for station ${station.name}`);
+            const marker = new google.maps.Marker({
+                position: station.position,
+                map: map,
+                title: station.name,
+                animation: google.maps.Animation.DROP
+            });
+
+            marker.addListener('click', () => {
+                console.log(`Fetching data for station ${station.id}`);
+                fetch(`/sensor_data/${station.id}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Received data:', data);
+                        const content = createInfoWindowContent(station, data);
+                        const infoWindow = new google.maps.InfoWindow({
+                            content: content
+                        });
+                        infoWindow.open(map, marker);
+                    })
+                    .catch(error => {
+                        console.error('Error fetching station data:', error);
+                        const content = createInfoWindowContent(station, { status: 'no_data' });
+                        const infoWindow = new google.maps.InfoWindow({
+                            content: content
+                        });
+                        infoWindow.open(map, marker);
+                    });
+            });
+        });
+    }
+
+    function formatDateTime(dateString) {
+        return new Date(dateString).toLocaleString();
+    }
+
+    function createInfoWindowContent(station, data) {
+        if (data.status === 'no_data') {
+            return `
+                <div class="info-window">
+                    <h3>${station.name}</h3>
+                    <p class="no-data">No data available for this station</p>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="info-window">
+                <h3>${station.name}</h3>
+                <p>Temperature: <span class="value">${data.temperature}°C</span></p>
+                <p>Humidity: <span class="value">${data.humidity}%</span></p>
+                <p>UV Index: <span class="value">${data.uv_index}</span></p>
+                <p>Air Quality: <span class="value">${data.air_quality}</span></p>
+                <p>CO2e: <span class="value">${data.co2e} ppm</span></p>
+                <p>Fill Level: <span class="value">${data.fill_level}%</span></p>
+                <p>Last Updated: <span class="value">${formatDateTime(data.rtc_time)}</span></p>
+            </div>
+        `;
+    }
+
+    // Load Google Maps when the page is ready
+    document.addEventListener('DOMContentLoaded', loadGoogleMapsScript);
+</script>
+
 <style>
     #map {
         height: 70vh;
@@ -44,104 +211,4 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script>
-    function formatDateTime(dateString) {
-        return new Date(dateString).toLocaleString();
-    }
-
-    function createInfoWindowContent(station, data) {
-        if (data.status === 'no_data') {
-            return `
-                <div class="info-window">
-                    <h3>${station.name}</h3>
-                    <p class="no-data">No data available for this station</p>
-                </div>
-            `;
-        }
-
-        return `
-            <div class="info-window">
-                <h3>${station.name}</h3>
-                <p>Temperature: <span class="value">${data.temperature}°C</span></p>
-                <p>Humidity: <span class="value">${data.humidity}%</span></p>
-                <p>UV Index: <span class="value">${data.uv_index}</span></p>
-                <p>Air Quality: <span class="value">${data.air_quality}</span></p>
-                <p>CO2e: <span class="value">${data.co2e} ppm</span></p>
-                <p>Fill Level: <span class="value">${data.fill_level}%</span></p>
-                <p>Last Updated: <span class="value">${formatDateTime(data.rtc_time)}</span></p>
-            </div>
-        `;
-    }
-
-    function initMap() {
-        console.log('Initializing map...');
-        const map = new google.maps.Map(document.getElementById('map'), {
-            zoom: 11,
-            center: { lat: 48.1500, lng: 11.5833 }, // Munich center
-            styles: [
-                {
-                    featureType: "poi",
-                    elementType: "labels",
-                    stylers: [{ visibility: "off" }]
-                }
-            ]
-        });
-
-        const stations = [
-            { 
-                id: 1,
-                name: 'Englischer Garten',
-                position: { lat: 48.1500, lng: 11.5833 }
-            },
-            { 
-                id: 2,
-                name: 'Garching TUM Campus',
-                position: { lat: 48.2620, lng: 11.6670 }
-            },
-            { 
-                id: 3,
-                name: 'Garching Mensa',
-                position: { lat: 48.2510, lng: 11.6520 }
-            }
-        ];
-
-        stations.forEach(station => {
-            console.log(`Creating marker for station ${station.name}`);
-            const marker = new google.maps.Marker({
-                position: station.position,
-                map: map,
-                title: station.name,
-                animation: google.maps.Animation.DROP
-            });
-
-            marker.addListener('click', () => {
-                console.log(`Fetching data for station ${station.id}`);
-                fetch(`/sensor_data/${station.id}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        console.log('Received data:', data);
-                        const content = createInfoWindowContent(station, data);
-                        const infoWindow = new google.maps.InfoWindow({
-                            content: content
-                        });
-                        infoWindow.open(map, marker);
-                    })
-                    .catch(error => {
-                        console.error('Error fetching station data:', error);
-                        const content = createInfoWindowContent(station, { status: 'no_data' });
-                        const infoWindow = new google.maps.InfoWindow({
-                            content: content
-                        });
-                        infoWindow.open(map, marker);
-                    });
-            });
-        });
-    }
-
-    // Initialize map when the page loads
-    window.onload = function() {
-        console.log('Page loaded, initializing map...');
-        initMap();
-    };
-</script>
 {% endblock %} 

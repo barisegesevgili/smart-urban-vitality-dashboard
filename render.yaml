@@ -20,7 +20,7 @@ services:
         sync: false
       - key: STATIONS
         value: '{
-          "1": {"name": "Garching/IOT-Lab", "location": {"lat": 262640368473626, "lng": 11.668331022751858}},
+          "1": {"name": "Garching/IOT-Lab", "location": {"lat": 48.26264036847362, "lng": 11.668331022751858}},
           "2": {"name": "Garching/Basketball Court", "location": {"lat": 48.26364466819253, "lng": 11.668459013506432}},
           "3": {"name": "Garching/IOT-Lab Balcony", "location": {"lat": 48.26271268490997, "lng": 11.66840813626192}}
         }'
