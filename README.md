@@ -1,6 +1,6 @@
 # Smart Urban Vitality Dashboard
 
-A real-time monitoring dashboard for urban environmental sensors, built with Flask and Chart.js.
+A real-time monitoring dashboard for urban environmental sensors, built with Flask and Chart.js. This application collects and visualizes environmental data from IoT sensors deployed across various locations.
 
 ## Features
 
@@ -9,13 +9,15 @@ A real-time monitoring dashboard for urban environmental sensors, built with Fla
   - Humidity
   - UV Index
   - Air Quality
-  - CO2e Levels
+  - CO2e Levels (Carbon Dioxide Equivalent)
   - Fill Levels
-- Interactive charts with multi-station support
-- Automatic alerts for critical conditions
+- Interactive charts with multi-station support and real-time updates
+- Automatic data validation and error handling
 - Station location mapping with Google Maps integration
-- Detailed sensor logs with filtering capabilities
-- Development tools for data management
+- Detailed sensor logs with filtering and export capabilities
+- Development tools for data management and debugging
+- RESTful API endpoints for data ingestion and retrieval
+- Configurable alert thresholds for environmental parameters
 
 ## Setup Instructions
 
@@ -23,8 +25,8 @@ A real-time monitoring dashboard for urban environmental sensors, built with Fla
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/barisegesevgili/smart-urban-vitality-dashboard.git
-cd smart-urban-vitality-dashboard
+git clone https://github.com/barisegesevgili/Isolated-WebServer.git
+cd Isolated-WebServer
 ```
 
 2. Create and activate virtual environment:
@@ -67,14 +69,14 @@ The dashboard will be available at `http://localhost:5000`
 
 ### Deployment Configuration
 
-When deploying to Render or similar platforms, you need to set the following environment variables:
+The application is configured to run on Render or similar platforms. Required environment variables:
 
 1. Required Environment Variables:
    - `FLASK_ENV`: Set to 'production'
    - `DEBUG`: Set to 'false'
    - `GOOGLE_MAPS_API_KEY`: Your Google Maps API key
    - `SECRET_KEY`: A secure secret key for the application
-   - `STATIONS`: JSON configuration for your monitoring stations (example below)
+   - `STATIONS`: JSON configuration for your monitoring stations
 
 2. Example STATIONS configuration:
 ```json
@@ -85,21 +87,15 @@ When deploying to Render or similar platforms, you need to set the following env
 }
 ```
 
-3. Optional Environment Variables:
-   - `THRESHOLDS`: JSON configuration for sensor thresholds
-   - `UPDATE_INTERVALS`: JSON configuration for update intervals
+## API Endpoints
 
-Note: When setting JSON environment variables, ensure they are properly formatted as a single line without line breaks.
-
-## Configuration
-
-The application is highly configurable through `config.py` (development) or environment variables (production):
-
-- `FLASK_ENV`: Set to 'development' or 'production'
-- `DEBUG`: Enable/disable debug mode
-- `STATIONS`: Configure monitoring stations with names and locations
-- `THRESHOLDS`: Set warning thresholds for different parameters
-- `UPDATE_INTERVALS`: Configure data refresh rates
+- `POST /data`: Submit new sensor data
+- `GET /data`: Retrieve sensor data with optional filtering
+- `GET /station-locations`: Get all station locations
+- `GET /sensor_data/<station_id>`: Get data for a specific station
+- `GET /logs`: View system logs
+- `GET /export_csv`: Export sensor data as CSV
+- `GET /health`: System health check
 
 ## Project Structure
 
@@ -109,20 +105,45 @@ The application is highly configurable through `config.py` (development) or envi
 ├── config.py           # Configuration file (not in git)
 ├── config.template.py  # Configuration template
 ├── requirements.txt    # Python dependencies
-├── templates/         # HTML templates
+├── gunicorn.conf.py   # Gunicorn configuration
+├── render.yaml        # Render deployment configuration
+├── migrations/        # Database migrations
+├── logs/             # Application logs
+├── templates/        # HTML templates
 │   ├── base.html
 │   ├── index.html
 │   ├── logs.html
 │   └── station_locations.html
-└── static/           # Static files (CSS, JS, etc.)
+└── instance/         # Instance-specific files (SQLite database)
 ```
 
-## Development
+## Development Features
 
-- The application uses SQLite for development
-- Development tools are available in the logs page
-- Alert thresholds can be adjusted in `config.py`
-- Charts auto-update every 30 seconds by default
+- SQLite database for development with automatic migrations
+- Comprehensive logging system with rotation
+- Development tools available in the logs page
+- Configurable alert thresholds
+- Auto-updating charts (default: 30 seconds)
+- Data validation and sanitization
+- Error handling and debugging support
+
+## Data Model
+
+The application uses SQLAlchemy with the following main model:
+
+```python
+class SensorData:
+    - timestamp: DateTime
+    - temperature: Float
+    - humidity: Float
+    - uv_index: Float
+    - air_quality: Float
+    - co2e: Float
+    - fill_level: Float
+    - rtc_time: DateTime
+    - bme_iaq_accuracy: Integer
+    - station_id: Integer
+```
 
 ## Contributing
 
