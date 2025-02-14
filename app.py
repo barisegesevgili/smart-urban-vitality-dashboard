@@ -182,6 +182,12 @@ class DatabaseError(Exception):
 class ValidationError(Exception):
     pass
 
+def convert_air_quality_to_percent(score):
+    """Convert air quality score (0-500) to percentage (0-100)"""
+    if score < 0:
+        return -1
+    return 100.0 * (1.0 - (score / 500))
+
 def validate_sensor_data(data):
     required_fields = ['timestamp', 'temperature', 'humidity', 'uv_index', 
                       'air_quality', 'co2e', 'fill_level', 'rtc_time', 
@@ -193,7 +199,7 @@ def validate_sensor_data(data):
     
     try:
         # Handle numeric fields that can be NaN
-        float_fields = ['temperature', 'humidity', 'uv_index', 'air_quality', 'co2e', 'fill_level']
+        float_fields = ['temperature', 'humidity', 'uv_index', 'co2e', 'fill_level']
         for field in float_fields:
             value = data[field]
             # Check if value is already NaN string
@@ -201,6 +207,13 @@ def validate_sensor_data(data):
                 data[field] = float('nan')
             else:
                 data[field] = float(value)
+        
+        # Special handling for air_quality - convert score to percentage
+        if isinstance(data['air_quality'], str) and data['air_quality'].upper() == 'NAN':
+            data['air_quality'] = float('nan')
+        else:
+            raw_score = float(data['air_quality'])
+            data['air_quality'] = convert_air_quality_to_percent(raw_score)
         
         # These fields must not be NaN
         data['bme_iaq_accuracy'] = int(data['bme_iaq_accuracy'])
@@ -508,7 +521,7 @@ def export_csv():
         # Write headers
         writer.writerow([
             'Timestamp', 'RTC Time', 'Station ID', 'Temperature (°C)', 
-            'Humidity (%)', 'UV Index', 'Air Quality (%)', 
+            'Humidity (%)', 'UV Index', 'Air Quality Index', 
             'CO2e (ppm)', 'Fill Level (%)', 'BME IAQ Accuracy'
         ])
         

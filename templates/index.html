@@ -217,12 +217,16 @@
             color: 'rgb(75, 192, 192)', 
             unit: '%',
             min: 0,
-            max: 120,
+            max: 100,
             ticks: {
                 stepSize: 10,
                 callback: function(value) {
-                    return value <= 100 ? value : '';
+                    return value + '%';
                 }
+            },
+            warning: { 
+                value: 30, 
+                message: 'Poor air quality detected! Consider ventilation.' 
             }
         },
         co2e: { 

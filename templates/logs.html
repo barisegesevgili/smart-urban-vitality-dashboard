@@ -389,7 +389,7 @@
             temperature: Number((20 + Math.random() * 10).toFixed(3)),  // Random between 20-30
             humidity: Number((40 + Math.random() * 30).toFixed(3)),     // Random between 40-70
             uv_index: Number((Math.random() * 11).toFixed(3)),         // Random between 0-11
-            air_quality: Number((50 + Math.random() * 50).toFixed(3)),  // Random between 50-100
+            air_quality: Number((Math.random() * 500).toFixed(3)),     // Random between 0-500 (raw score)
             co2e: Number((800 + Math.random() * 800).toFixed(3)),      // Random between 800-1600
             fill_level: Number((Math.random() * 100).toFixed(3)),      // Random between 0-100
             rtc_time: futureTime.toISOString().replace('T', ' ').split('.')[0],
