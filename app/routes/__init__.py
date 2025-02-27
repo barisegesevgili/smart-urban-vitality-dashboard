@@ -1,7 +1,7 @@
 from flask import jsonify, render_template, request, send_file
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 import csv
-from io import StringIO
+from io import StringIO, BytesIO
 from ..models.sensor_data import db, SensorData
 from ..utils.validators import validate_sensor_data, format_rtc_time, ValidationError
 
@@ -25,7 +25,7 @@ def register_routes(app):
             rtc_time = format_rtc_time(data['rtc_time'])
             
             sensor_data = SensorData(
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(UTC),
                 temperature=data['temperature'],
                 humidity=data['humidity'],
                 uv_index=data['uv_index'],
@@ -57,7 +57,7 @@ def register_routes(app):
             if not station_id:
                 return jsonify({'error': 'station_id is required'}), 400
                 
-            time_threshold = datetime.utcnow() - timedelta(hours=hours)
+            time_threshold = datetime.now(UTC) - timedelta(hours=hours)
             
             query = SensorData.query.filter(
                 SensorData.station_id == station_id,
@@ -93,25 +93,25 @@ def register_routes(app):
             if not station_id:
                 return jsonify({'error': 'station_id is required'}), 400
                 
-            time_threshold = datetime.utcnow() - timedelta(hours=hours)
+            time_threshold = datetime.now(UTC) - timedelta(hours=hours)
             
             query = SensorData.query.filter(
                 SensorData.station_id == station_id,
                 SensorData.timestamp >= time_threshold
             ).order_by(SensorData.timestamp.asc())
             
-            # Create CSV in memory
-            si = StringIO()
-            cw = csv.writer(si)
+            # Create string buffer first
+            string_buffer = StringIO()
+            writer = csv.writer(string_buffer)
             
             # Write headers
-            cw.writerow(['timestamp', 'temperature', 'humidity', 'uv_index', 
-                        'air_quality', 'co2e', 'fill_level', 'rtc_time', 
-                        'bme_iaq_accuracy'])
+            writer.writerow(['timestamp', 'temperature', 'humidity', 'uv_index', 
+                           'air_quality', 'co2e', 'fill_level', 'rtc_time', 
+                           'bme_iaq_accuracy'])
             
             # Write data
             for record in query.all():
-                cw.writerow([
+                writer.writerow([
                     record.timestamp.isoformat(),
                     record.temperature,
                     record.humidity,
@@ -123,11 +123,14 @@ def register_routes(app):
                     record.bme_iaq_accuracy
                 ])
             
-            output = si.getvalue()
-            si.close()
+            # Convert to bytes
+            output = BytesIO()
+            output.write(string_buffer.getvalue().encode('utf-8-sig'))  # Use UTF-8 with BOM for Excel compatibility
+            output.seek(0)
+            string_buffer.close()
             
             return send_file(
-                StringIO(output),
+                output,
                 mimetype='text/csv',
                 as_attachment=True,
                 download_name=f'sensor_data_station_{station_id}.csv'
