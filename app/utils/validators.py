@@ -1,9 +1,7 @@
 from datetime import datetime
+from .errors import ValidationError
 
 class DatabaseError(Exception):
-    pass
-
-class ValidationError(Exception):
     pass
 
 def convert_air_quality_to_percent(score):

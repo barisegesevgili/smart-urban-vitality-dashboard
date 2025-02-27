@@ -1,11 +1,17 @@
 from flask import Flask
 from flask_cors import CORS
 from flask_migrate import Migrate
+from flask_apispec import FlaskApiSpec
+from apispec import APISpec
+from apispec.ext.marshmallow import MarshmallowPlugin
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import os
 import json
 import logging
 from logging.handlers import RotatingFileHandler
 from .models.sensor_data import db, SensorData
+from .utils.errors import register_error_handlers
 
 def load_config():
     """Load configuration from environment variables in production, fall back to config.py in development"""
@@ -99,6 +105,28 @@ def create_app():
     app = Flask(__name__)
     CORS(app)
 
+    # Initialize rate limiter
+    limiter = Limiter(
+        key_func=get_remote_address,
+        app=app,
+        default_limits=["10000 per day", "1000 per hour"],
+        storage_uri="memory://"
+    )
+    app.limiter = limiter  # Store limiter instance on app
+
+    # Register error handlers
+    register_error_handlers(app)
+
+    # Add security headers
+    @app.after_request
+    def add_security_headers(response):
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'DENY'
+        response.headers['X-XSS-Protection'] = '1; mode=block'
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        response.headers['Content-Security-Policy'] = "default-src 'self'"
+        return response
+
     # Configure logging
     if not os.path.exists('logs'):
         os.mkdir('logs')
@@ -120,9 +148,22 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, '..', 'app.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+    # API documentation configuration
+    app.config.update({
+        'APISPEC_SPEC': APISpec(
+            title='Smart Urban Vitality API',
+            version='v1',
+            plugins=[MarshmallowPlugin()],
+            openapi_version='2.0.0'
+        ),
+        'APISPEC_SWAGGER_URL': '/swagger/',  # URI to access API Doc JSON
+        'APISPEC_SWAGGER_UI_URL': '/swagger-ui/'  # URI to access UI of API Doc
+    })
+
     # Initialize extensions
     db.init_app(app)
     migrate = Migrate(app, db)
+    docs = FlaskApiSpec(app)
 
     # Create tables
     with app.app_context():
@@ -135,5 +176,11 @@ def create_app():
     # Register routes
     from .routes import register_routes
     register_routes(app)
+
+    # Register all documented endpoints with API documentation
+    with app.app_context():
+        for view in app.view_functions.values():
+            if hasattr(view, '_spec'):
+                docs.register(view)
 
     return app
