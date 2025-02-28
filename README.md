@@ -2,6 +2,10 @@
 
 Welcome to the Smart Urban Vitality Dashboard! 👋 This is your go-to solution for monitoring urban environmental conditions in real-time. Built with Flask and Chart.js, our dashboard brings environmental sensor data to life with beautiful visualizations and intuitive controls.
 
+
+## ATTENTION!
+As we have a free subscription of the Render application, the server goes down after a while, it does not receive any requests. So expect to wait some time till the server comes up again, after you make your first request.
+
 ## What's Inside? 🎯
 
 Our dashboard helps you keep an eye on:
